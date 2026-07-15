@@ -1,16 +1,26 @@
 #pragma once
 
 #include "instruction/Mnemonic.hh"
-#include "instruction/Format.hh"
+#include "instruction/Layout.hh"
 
-namespace Revo::Instruction::Specification {
+namespace Revo::InstructionSpecification {
 
 template <Mnemonic TMnemonic>
-struct InstructionSpecification;
+struct Specification;
 
 template <>
-struct InstructionSpecification<Mnemonic::STW> {
-    using Format = InstructionFormat::DForm::Impl_RS_RA_D;
-}
+struct Specification<Mnemonic::STW> {
+    using Layout = InstructionLayout::DForm::Impl_RS_RA_D;
+};
 
-} // namespace Revo::Instruction::Specification
+template <>
+struct Specification<Mnemonic::LWZ> {
+    using Layout = InstructionLayout::DForm::Impl_RT_RA_D;
+};
+
+template <>
+struct Specification<Mnemonic::BLR> {
+    using Layout = InstructionLayout::XLForm::Impl_XO;
+};
+
+} // namespace Revo::InstructionSpecification

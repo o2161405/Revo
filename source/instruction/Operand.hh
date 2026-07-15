@@ -4,7 +4,7 @@
 
 #include "instruction/Register.hh"
 
-namespace Revo::Instruction {
+namespace Revo {
 
 struct Operand {
     // todo: can the types in these structs be derived from Instruction::INSTRUCTION_WIDTH
@@ -40,4 +40,4 @@ struct Operand {
     Variant value;
 };
 
-} // namespace Revo::Instruction
+} // namespace Revo

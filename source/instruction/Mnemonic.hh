@@ -1,6 +1,6 @@
 #pragma once
 
-namespace Revo::Instruction {
+namespace Revo {
 
 enum class Mnemonic {
     STW,
@@ -8,4 +8,4 @@ enum class Mnemonic {
     BLR,
 };
 
-} // namespace Revo::Instruction
+} // namespace Revo
