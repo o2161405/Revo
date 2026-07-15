@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-namespace Revo::File {
+namespace Revo {
 
 class ELF {
 public:
@@ -105,7 +105,7 @@ public:
 
     struct Function {
         std::vector<u32> instructions;
-        std::flat_map<RelativeOffset, std::vector<std::reference_wrapper<const Rela>>> relocations;
+        std::flat_map<RelativeOffset, std::vector<Rela>> relocations;
         u32 offset;
         u32 size;
     };
@@ -156,4 +156,4 @@ private:
     std::vector<Function> mRevoFunctions;
 };
 
-} // namespace Revo::File
+} // namespace Revo

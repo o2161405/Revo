@@ -1,9 +1,9 @@
 #pragma once
 
-#include "decoder/Instruction.hh"
-#include "decoder/Operand.hh"
+#include "instruction/Instruction.hh"
+#include "instruction/Operand.hh"
 
-namespace Revo::Decoder::Format {
+namespace Revo::InstructionFormat {
 
 /* clang-format off */
 using OPCD = Instruction::Field<0, 5, u8>;
@@ -238,4 +238,4 @@ struct MDSForm {
 };
 /* clang-format on */
 
-} // namespace Revo::Decoder::Format
+} // namespace Revo::InstructionFormat

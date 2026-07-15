@@ -2,9 +2,9 @@
 
 #include <variant>
 
-#include "decoder/Register.hh"
+#include "instruction/Register.hh"
 
-namespace Revo::Decoder {
+namespace Revo::Instruction {
 
 struct Operand {
     // todo: can the types in these structs be derived from Instruction::INSTRUCTION_WIDTH
@@ -40,4 +40,4 @@ struct Operand {
     Variant value;
 };
 
-} // namespace Revo::Decoder
+} // namespace Revo::Instruction

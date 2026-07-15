@@ -1,6 +1,6 @@
 #pragma once
 
-namespace Revo::Decoder::Register {
+namespace Revo::Instruction::Register {
 
 /* clang-format off */
 enum class GPR : u8 {
@@ -22,4 +22,4 @@ enum class CR : u8 {
 };
 /* clang-format on */
 
-} // namespace Revo::Decoder::Register
+} // namespace Revo::Instruction::Register

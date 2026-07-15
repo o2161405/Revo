@@ -5,7 +5,7 @@
 
 #include <algorithm>
 
-namespace Revo::File {
+namespace Revo {
 
 std::expected<ELF, std::string>
 ELF::parse(const std::filesystem::path& path) {
@@ -247,13 +247,12 @@ ELF::parse_revo_functions(std::ifstream& stream) {
 
                 Util::byteswap(instructions);
 
-                std::flat_map<RelativeOffset, std::vector<std::reference_wrapper<const Rela>>>
-                    relocations;
+                std::flat_map<RelativeOffset, std::vector<Rela>> relocations;
 
                 for (auto [index, rela] : std::views::enumerate(mRevoRelocations)) {
                     if (symbol.contains(rela.r_offset)) {
                         assigned_relocations[index] = true;
-                        relocations[rela.r_offset - symbol.st_value].push_back(std::ref(rela));
+                        relocations[rela.r_offset - symbol.st_value].push_back(rela);
 
                         Console::debug("Relocation {:#x} assigned to function {:#x}", rela.r_offset,
                             symbol.st_value);
@@ -299,4 +298,4 @@ ELF::get_section(std::string_view specified_section) const {
     return std::unexpected(std::format("failed to find section {}", specified_section));
 }
 
-} // namespace Revo::File
+} // namespace Revo

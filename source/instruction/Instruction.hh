@@ -4,10 +4,10 @@
 #include <ranges>
 #include <type_traits>
 
-#include "decoder/Mnemonic.hh"
-#include "decoder/Operand.hh"
+#include "instruction/Mnemonic.hh"
+#include "instruction/Operand.hh"
 
-namespace Revo::Decoder {
+namespace Revo {
 
 class Instruction {
 public:
@@ -18,7 +18,7 @@ public:
         Operand::Type TOperandType = Operand::Type::None>
     struct Field {
         using data_type = TDataType;
-        using operand_type = TOperandType;
+        static constexpr Operand::Type operand_type = TOperandType;
 
         STATIC_ASSERT(TStartIndex <= TEndIndex, //
             "Start index must be less than or equal to the end index");
@@ -72,4 +72,4 @@ struct DecodedInstruction {
     // todo: add instruction behaviour booleans here
 };
 
-} // namespace Revo::Decoder
+} // namespace Revo
