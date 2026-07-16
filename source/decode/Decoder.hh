@@ -1,9 +1,9 @@
 #pragma once
 
-#include "decode/Instruction.hh"
-#include "decode/Mnemonic.hh"
-#include "decode/Operand.hh"
 #include "file/ELF.hh"
+#include "instruction/Instruction.hh"
+#include "instruction/Mnemonic.hh"
+#include "instruction/Operand.hh"
 
 namespace Revo {
 
@@ -23,6 +23,18 @@ public:
 
 private:
     Decoder() = default;
+
+    // --- Decoding steps ---
+    template <Mnemonic TMnemonic>
+    [[nodiscard]] static constexpr DecodedInstruction
+    decode(Instruction instruction);
+
+    // --- Utility functions ---
+    [[nodiscard]] static std::expected<DecodedInstruction, std::string>
+    decode_primary(Instruction instruction);
+
+    [[nodiscard]] static std::expected<DecodedInstruction, std::string>
+    decode_extended(u8 opcd, Instruction instruction);
 
     // --- Member variables ---
     std::vector<Function> mFunctions;

@@ -15,14 +15,16 @@ public:
     static constexpr u32 INSTRUCTION_WIDTH_INDEX = INSTRUCTION_WIDTH - 1;
 
     template <u8 TStartIndex, u8 TEndIndex, typename TDataType,
-        Operand::Type TOperandType = Operand::Type::None>
+        Operand::Type TOperandType = Operand::Type::None,
+        Operand::Behavior TOperandBehavior = Operand::Behavior::None>
     struct Field {
         using data_type = TDataType;
         static constexpr Operand::Type operand_type = TOperandType;
+        static constexpr Operand::Behavior operand_behaviour = TOperandBehavior;
 
-        STATIC_ASSERT(TStartIndex <= TEndIndex, //
+        static_assert(TStartIndex <= TEndIndex, //
             "Start index must be less than or equal to the end index");
-        STATIC_ASSERT(TEndIndex <= INSTRUCTION_WIDTH_INDEX,
+        static_assert(TEndIndex <= INSTRUCTION_WIDTH_INDEX,
             "End index must be less than or equal to the instruction width");
         static constexpr u8 bits = TEndIndex - TStartIndex + 1;
         static constexpr u8 shift = static_cast<u8>(INSTRUCTION_WIDTH_INDEX - TEndIndex);
@@ -32,7 +34,7 @@ public:
     template <typename... TFields>
     struct Layout {
         static constexpr u32 bits = (0 + ... + TFields::bits);
-        STATIC_ASSERT(bits <= INSTRUCTION_WIDTH,
+        static_assert(bits <= INSTRUCTION_WIDTH,
             "Instruction layout must be less than or equal to the instruction width");
     };
 
@@ -47,7 +49,8 @@ public:
             constexpr u32 shift = INSTRUCTION_WIDTH - TField::bits;
             return static_cast<typename TField::data_type>(
                 static_cast<s32>(raw_field << shift) >> shift);
-        } else {
+        }
+        else {
             return static_cast<typename TField::data_type>(raw_field);
         }
     }
@@ -58,6 +61,7 @@ private:
 
 struct DecodedInstruction {
     static constexpr auto MAX_OPERANDS{5uz};
+    static constexpr auto BEHAVIOR_COUNT{4uz};
 
     constexpr void
     set_operands(std::initializer_list<Operand> operand_list) {
@@ -66,10 +70,14 @@ struct DecodedInstruction {
         }
     }
 
+    [[nodiscard]] constexpr bool
+    has_behavior(Operand::Behavior behavior) const {
+        return behaviors[std::to_underlying(behavior) - 1];
+    }
+
     Mnemonic mnemonic;
     std::array<Operand, MAX_OPERANDS> operands{};
-
-    // todo: add instruction behaviour booleans here
+    std::array<bool, BEHAVIOR_COUNT> behaviors{};
 };
 
 } // namespace Revo

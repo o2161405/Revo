@@ -10,8 +10,8 @@ using OPCD = Instruction::Field<0, 5, u8>;
 
 struct IForm {
     using LI = Instruction::Field<6,  29, s32, Operand::Type::BranchDestination>;
-    using AA = Instruction::Field<30, 30, u8>;
-    using LK = Instruction::Field<31, 31, u8>;
+    using AA = Instruction::Field<30, 30, u8, Operand::Type::None, Operand::Behavior::Absolute>;
+    using LK = Instruction::Field<31, 31, u8, Operand::Type::None, Operand::Behavior::Link>;
 
     using Impl = Instruction::Layout<OPCD, LI, AA, LK>;
 };
@@ -20,8 +20,8 @@ struct BForm {
     using BO = Instruction::Field<6,  10, u8,  Operand::Type::Immediate>;
     using BI = Instruction::Field<11, 15, u8,  Operand::Type::Immediate>;
     using BD = Instruction::Field<16, 29, s16, Operand::Type::BranchDestination>;
-    using AA = Instruction::Field<30, 30, u8>;
-    using LK = Instruction::Field<31, 31, u8>;
+    using AA = Instruction::Field<30, 30, u8, Operand::Type::None, Operand::Behavior::Absolute>;
+    using LK = Instruction::Field<31, 31, u8, Operand::Type::None, Operand::Behavior::Link>;
 
     using Impl = Instruction::Layout<OPCD, BO, BI, BD, AA, LK>;
 };
@@ -65,7 +65,7 @@ struct XForm {
     using NB    = Instruction::Field<16, 20, u8,  Operand::Type::Immediate>;
     using SH    = Instruction::Field<16, 20, u8,  Operand::Type::Immediate>;
     using XO    = Instruction::Field<21, 30, u16>;
-    using Rc    = Instruction::Field<31, 31, u8>;
+    using Rc    = Instruction::Field<31, 31, u8, Operand::Type::None, Operand::Behavior::Record>;
     using BIT31 = Instruction::Field<31, 31, u8>;
 
     using Impl_RT_RA_RB_XO       = Instruction::Layout<OPCD, RT, RA, RB, XO>;
@@ -100,7 +100,7 @@ struct XLForm {
     using BB  = Instruction::Field<16, 20, u8,  Operand::Type::Immediate>;
     using BH  = Instruction::Field<19, 20, u8,  Operand::Type::Immediate>;
     using XO  = Instruction::Field<21, 30, u16>;
-    using LK  = Instruction::Field<31, 31, u8>;
+    using LK  = Instruction::Field<31, 31, u8, Operand::Type::None, Operand::Behavior::Link>;
 
     using Impl_BT_BA_BB_XO    = Instruction::Layout<OPCD, BT, BA, BB, XO>;
     using Impl_BO_BI_BH_XO_LK = Instruction::Layout<OPCD, BO, BI, BH, XO, LK>;
@@ -127,9 +127,9 @@ struct XOForm {
     using RT = Instruction::Field<6,  10, u8,  Operand::Type::GPR>;
     using RA = Instruction::Field<11, 15, u8,  Operand::Type::GPR>;
     using RB = Instruction::Field<16, 20, u8,  Operand::Type::GPR>;
-    using OE = Instruction::Field<21, 21, u8>;
+    using OE = Instruction::Field<21, 21, u8, Operand::Type::None, Operand::Behavior::Overflow>;
     using XO = Instruction::Field<22, 30, u16>;
-    using Rc = Instruction::Field<31, 31, u8>;
+    using Rc = Instruction::Field<31, 31, u8, Operand::Type::None, Operand::Behavior::Record>;
 
     using Impl_RT_RA_RB_OE_XO_Rc = Instruction::Layout<OPCD, RT, RA, RB, OE, XO, Rc>;
     using Impl_RT_RA_RB_XO_Rc    = Instruction::Layout<OPCD, RT, RA, RB, XO, Rc>;
@@ -143,7 +143,7 @@ struct MForm {
     using SH = Instruction::Field<16, 20, u8, Operand::Type::Immediate>;
     using MB = Instruction::Field<21, 25, u8, Operand::Type::Immediate>;
     using ME = Instruction::Field<26, 30, u8, Operand::Type::Immediate>;
-    using Rc = Instruction::Field<31, 31, u8>;
+    using Rc = Instruction::Field<31, 31, u8, Operand::Type::None, Operand::Behavior::Record>;
 
     using Impl_RS_RA_RB_MB_ME_Rc = Instruction::Layout<OPCD, RS, RA, RB, MB, ME, Rc>;
     using Impl_RS_RA_SH_MB_ME_Rc = Instruction::Layout<OPCD, RS, RA, SH, MB, ME, Rc>;

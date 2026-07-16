@@ -199,6 +199,10 @@ ELF::parse_revo_relocations(std::ifstream& stream) {
 
             Console::info("Parsed {} Revo relocations", mRevoRelocations.size());
             return {};
+        })
+        .or_else([](const auto&) -> std::expected<void, std::string> {
+            Console::info("No relocation section found, attempting parse anyway");
+            return {};
         });
 }
 

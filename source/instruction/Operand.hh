@@ -26,6 +26,14 @@ struct Operand {
         BranchDestination,
     };
 
+    enum class Behavior : u8 {
+        None,
+        Record,
+        Link,
+        Absolute,
+        Overflow,
+    };
+
     /* clang-format off */
     using Variant = std::variant<
         std::monostate,
@@ -36,6 +44,29 @@ struct Operand {
         BranchDestination
     >;
     /* clang-format on */
+
+    template <Type TType>
+    [[nodiscard]] static constexpr Operand
+    get(auto value) {
+        if constexpr (TType == Type::GPR) {
+            return Operand{.value = Register::GPR{value}};
+        }
+        else if constexpr (TType == Type::FPR) {
+            return Operand{.value = Register::FPR{value}};
+        }
+        else if constexpr (TType == Type::CR) {
+            return Operand{.value = Register::CR{value}};
+        }
+        else if constexpr (TType == Type::Immediate) {
+            return Operand{.value = Immediate{value}};
+        }
+        else if constexpr (TType == Type::BranchDestination) {
+            return Operand{.value = BranchDestination{static_cast<u32>(value)}};
+        }
+        else {
+            static_assert(false, "Type has no operand equivalent");
+        }
+    }
 
     Variant value;
 };

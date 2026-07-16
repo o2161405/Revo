@@ -1,7 +1,7 @@
 #pragma once
 
-#include "instruction/Mnemonic.hh"
 #include "instruction/Layout.hh"
+#include "instruction/Mnemonic.hh"
 
 namespace Revo::InstructionSpecification {
 

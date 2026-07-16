@@ -110,6 +110,11 @@ public:
         u32 size;
     };
 
+    [[nodiscard]] const std::vector<Function>&
+    functions() const {
+        return mRevoFunctions;
+    }
+
     [[nodiscard]] static std::expected<ELF, std::string>
     parse(const std::filesystem::path& path);
 
