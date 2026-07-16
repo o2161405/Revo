@@ -82,7 +82,7 @@ Decoder::decode_extended(u8 opcd, Instruction instruction) {
     switch (opcd) {
     case 19:
         switch (xo) {
-        case 16: return decode<Mnemonic::BLR>(instruction);
+        case 16: return decode<Mnemonic::BCLR>(instruction);
         }
         break;
     }

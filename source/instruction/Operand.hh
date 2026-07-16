@@ -61,7 +61,7 @@ struct Operand {
             return Operand{.value = Immediate{value}};
         }
         else if constexpr (TType == Type::BranchDestination) {
-            return Operand{.value = BranchDestination{static_cast<u32>(value)}};
+            return Operand{.value = BranchDestination{static_cast<u32>(value) << 2}};
         }
         else {
             static_assert(false, "Type has no operand equivalent");

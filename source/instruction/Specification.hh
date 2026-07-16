@@ -19,8 +19,8 @@ struct Specification<Mnemonic::LWZ> {
 };
 
 template <>
-struct Specification<Mnemonic::BLR> {
-    using Layout = InstructionLayout::XLForm::Impl_XO;
+struct Specification<Mnemonic::BCLR> {
+    using Layout = InstructionLayout::XLForm::Impl_BO_BI_BH_XO_LK;
 };
 
 } // namespace Revo::InstructionSpecification
