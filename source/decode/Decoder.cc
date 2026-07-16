@@ -21,7 +21,7 @@ Decoder::decode(const ELF& elf) {
         decoded.instructions.reserve(function.instructions.size());
 
         for (auto [index, raw] : std::views::enumerate(function.instructions)) {
-            auto result = decode_primary(Instruction{static_cast<u32>(raw)});
+            auto result = decode_instruction(Instruction{static_cast<u32>(raw)});
             if (!result) {
                 return std::unexpected(std::format(
                     "{} at {:#x}", result.error(), function.offset + index * sizeof(u32)));
@@ -50,8 +50,8 @@ Decoder::decode(Instruction instruction) {
         std::define_static_array(std::meta::template_arguments_of(std::meta::dealias(^^Layout)))) {
         using TField = [:field:];
         if constexpr (TField::operand_type != Operand::Type::None) {
-            decoded_instruction.operands[index++] =
-                Operand::get<TField::operand_type>(instruction.get<TField>());
+            decoded_instruction.operands[index++] = Operand::get<TField::operand_type>(
+                instruction.get<TField>());
         }
         else if constexpr (TField::operand_behaviour != Operand::Behavior::None) {
             decoded_instruction.behaviors[std::to_underlying(TField::operand_behaviour) - 1] =
@@ -63,32 +63,42 @@ Decoder::decode(Instruction instruction) {
 }
 
 std::expected<DecodedInstruction, std::string>
-Decoder::decode_primary(Instruction instruction) {
+Decoder::decode_instruction(Instruction instruction) {
+    constexpr auto get_xo_field = [](std::meta::info layout) consteval -> std::meta::info {
+        for (auto field : std::meta::template_arguments_of(std::meta::dealias(layout))) {
+            if (std::meta::extract<bool>(std::meta::substitute(^^Decoder::is_extended_opcode_v, {field}))) {
+                return field;
+            }
+        }
+        return {};
+    };
+
     const auto opcd = instruction.get<InstructionLayout::OPCD>();
 
-    switch (opcd) {
-    case 32: return decode<Mnemonic::LWZ>(instruction);
-    case 36: return decode<Mnemonic::STW>(instruction);
-    case 19:
-    case 31: return decode_extended(opcd, instruction);
-    default: return std::unexpected(std::format("unimplemented primary opcode ({})", opcd));
-    }
-}
+    template for (constexpr auto enumerator :
+        std::define_static_array(std::meta::enumerators_of(^^Mnemonic))) {
+        constexpr auto mnemonic = [:enumerator:];
+        using Specification = InstructionSpecification::Specification<mnemonic>;
+        constexpr auto xo_field = get_xo_field(^^typename Specification::Layout);
 
-std::expected<DecodedInstruction, std::string>
-Decoder::decode_extended(u8 opcd, Instruction instruction) {
-    const auto xo = instruction.get<InstructionLayout::XLForm::XO>();
-
-    switch (opcd) {
-    case 19:
-        switch (xo) {
-        case 16: return decode<Mnemonic::BCLR>(instruction);
+        if (opcd == Specification::opcd) {
+            if constexpr (xo_field != std::meta::info{}) {
+                static_assert(
+                    requires { Specification::xo; },
+                    "Layout has an extended opcode but the instruction specification doesn't "
+                    "provide the required fields");
+                using TXOField = [:xo_field:];
+                if (instruction.get<TXOField>() == Specification::xo) {
+                    return decode<mnemonic>(instruction);
+                }
+            }
+            else {
+                return decode<mnemonic>(instruction);
+            }
         }
-        break;
     }
 
-    return std::unexpected(
-        std::format("unimplemented extended opcode {} (primary opcode {})", xo, opcd));
+    return std::unexpected(std::format("unimplemented opcode ({})", opcd));
 }
 
 } // namespace Revo

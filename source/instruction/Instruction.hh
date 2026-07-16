@@ -31,6 +31,11 @@ public:
         static constexpr u32 mask = (1ULL << bits) - 1;
     };
 
+    template <u8 TStartIndex, u8 TEndIndex>
+    struct ExtendedOpcode : Field<TStartIndex, TEndIndex, u16> {
+        static constexpr bool is_extended_opcode = true;
+    };
+
     template <typename... TFields>
     struct Layout {
         static constexpr u32 bits = (0 + ... + TFields::bits);

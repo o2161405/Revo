@@ -1,5 +1,7 @@
 #pragma once
 
+#include "file/Function.hh"
+
 #include <array>
 #include <expected>
 #include <filesystem>
@@ -103,12 +105,7 @@ public:
     };
 #pragma pack(pop)
 
-    struct Function {
-        std::vector<u32> instructions;
-        std::flat_map<RelativeOffset, std::vector<Rela>> relocations;
-        u32 offset;
-        u32 size;
-    };
+    using Function = FunctionImpl<u32, RelativeOffset, Rela>;
 
     [[nodiscard]] const std::vector<Function>&
     functions() const {

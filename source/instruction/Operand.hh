@@ -24,6 +24,7 @@ struct Operand {
         CR,
         Immediate,
         BranchDestination,
+        SplitImmediate,
     };
 
     enum class Behavior : u8 {
@@ -62,6 +63,14 @@ struct Operand {
         }
         else if constexpr (TType == Type::BranchDestination) {
             return Operand{.value = BranchDestination{static_cast<u32>(value) << 2}};
+        }
+        else if constexpr (TType == Type::SplitImmediate) {
+            constexpr auto SHIFT{5uz};
+            constexpr u32 HALF_MASK = (1 << SHIFT) - 1;
+
+            const auto raw = static_cast<u32>(value);
+            return Operand{.value = Immediate{
+                               static_cast<s32>(((raw & HALF_MASK) << SHIFT) | (raw >> SHIFT))}};
         }
         else {
             static_assert(false, "Type has no operand equivalent");
