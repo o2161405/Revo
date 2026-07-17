@@ -1,3 +1,4 @@
+    .section .revo_text, "ax", @progbits
     .globl test_countdown
     .type test_countdown, @function
 

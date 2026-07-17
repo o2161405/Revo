@@ -1,3 +1,4 @@
+    .section .revo_text, "ax", @progbits
     .globl test_conditional_add
     .type test_conditional_add, @function
 

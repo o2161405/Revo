@@ -99,4 +99,31 @@ struct InstructionSpecification<Mnemonic::BC> {
     static constexpr u8 opcd = 16;
 };
 
+template <>
+struct InstructionSpecification<Mnemonic::B> {
+    using Layout = InstructionLayout::IForm::Impl;
+    static constexpr u8 opcd = 18;
+};
+
+template <>
+struct InstructionSpecification<Mnemonic::CMP> {
+    using Layout = InstructionLayout::XForm::Impl_BF_L10_RA_RB_XO;
+    static constexpr u8 opcd = 31;
+    static constexpr u16 xo = 0;
+};
+
+template <>
+struct InstructionSpecification<Mnemonic::MTSPR> {
+    using Layout = InstructionLayout::XFXForm::Impl_RS_SPR_XO;
+    static constexpr u8 opcd = 31;
+    static constexpr u16 xo = 467;
+};
+
+template <>
+struct InstructionSpecification<Mnemonic::ADDIC_RC> {
+    using Layout = InstructionLayout::DForm::Impl_RT_RA_SI;
+    static constexpr u8 opcd = 13;
+    static constexpr auto implied_behaviors = Operand::Behavior::Record;
+};
+
 } // namespace Revo

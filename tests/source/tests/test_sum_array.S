@@ -1,3 +1,4 @@
+    .section .revo_text, "ax", @progbits
     .globl test_sum_array
     .type test_sum_array, @function
 

@@ -22,6 +22,10 @@ enum class Mnemonic {
     ADDI,
     CMPI,
     BC,
+    B,
+    CMP,
+    MTSPR,
+    ADDIC_RC, // `addic.`, seperate opcode from `addic`
 };
 
 } // namespace Revo
