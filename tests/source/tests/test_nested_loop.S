@@ -1,4 +1,3 @@
-    .section .revo_text, "ax", @progbits
     .globl test_nested_loop
     .type test_nested_loop, @function
 

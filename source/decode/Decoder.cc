@@ -39,23 +39,36 @@ Decoder::decode(const ELF& elf) {
 template <Mnemonic TMnemonic>
 [[nodiscard]] constexpr DecodedInstruction
 Decoder::decode(Instruction instruction) {
-    using Layout = InstructionSpecification::Specification<TMnemonic>::Layout;
+    using Specification = InstructionSpecification::Specification<TMnemonic>;
+    using Layout = Specification::Layout;
 
     DecodedInstruction decoded_instruction{.mnemonic = TMnemonic};
     auto index{0uz};
 
     // todo: is this possible without dealiasing? it makes printing disassembly harder
     // if we ever want to do that
-    template for (constexpr auto field :
-        std::define_static_array(std::meta::template_arguments_of(std::meta::dealias(^^Layout)))) {
+    template for (constexpr auto field : std::define_static_array(std::meta::template_arguments_of(
+                      std::meta::dealias(^^Layout)))) {
         using TField = [:field:];
         if constexpr (TField::operand_type != Operand::Type::None) {
             decoded_instruction.operands[index++] = Operand::get<TField::operand_type>(
                 instruction.get<TField>());
         }
         else if constexpr (TField::operand_behaviour != Operand::Behavior::None) {
+            if constexpr (requires { Specification::implied_behaviours; }) {
+                static_assert(!std::ranges::contains(
+                                  Specification::implied_behaviours, TField::operand_behaviour),
+                    "Operand and implied behaviour share one or more flags");
+            }
+
             decoded_instruction.behaviors[std::to_underlying(TField::operand_behaviour) - 1] =
                 instruction.get<TField>() != 0;
+        }
+    }
+
+    if constexpr (requires { Specification::implied_behaviours; }) {
+        for (const auto behaviour : Specification::implied_behaviours) {
+            decoded_instruction.behaviors[std::to_underlying(behaviour) - 1] = true;
         }
     }
 
@@ -66,7 +79,8 @@ std::expected<DecodedInstruction, std::string>
 Decoder::decode_instruction(Instruction instruction) {
     constexpr auto get_xo_field = [](std::meta::info layout) consteval -> std::meta::info {
         for (auto field : std::meta::template_arguments_of(std::meta::dealias(layout))) {
-            if (std::meta::extract<bool>(std::meta::substitute(^^Decoder::is_extended_opcode_v, {field}))) {
+            if (std::meta::extract<bool>(
+                    std::meta::substitute(^^Decoder::is_extended_opcode_v, {field}))) {
                 return field;
             }
         }

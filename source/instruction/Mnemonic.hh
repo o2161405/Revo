@@ -12,6 +12,16 @@ enum class Mnemonic {
     STW,
     LWZ,
     BCLR,
+    ADD,
+    SUBF,
+    MULLW,
+    ANDI_RC, // 'andi.`, there isnt a plain `andi` instruction
+    XOR,
+    OR,
+    RLWINM,
+    ADDI,
+    CMPI,
+    BC,
 };
 
 } // namespace Revo

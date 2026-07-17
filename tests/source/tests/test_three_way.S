@@ -1,4 +1,3 @@
-    .section .revo_text, "ax", @progbits
     .globl test_three_way
     .type test_three_way, @function
 
