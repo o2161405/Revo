@@ -1,6 +1,7 @@
 #pragma once
 
 #include <concepts>
+#include <inplace_vector>
 #include <ranges>
 #include <type_traits>
 
@@ -38,7 +39,7 @@ public:
 
     template <typename... TFields>
     struct Layout {
-        static constexpr u32 bits = (0 + ... + TFields::bits);
+        static constexpr u32 bits = (0uz + ... + TFields::bits);
         static_assert(bits <= INSTRUCTION_WIDTH,
             "Instruction layout must be less than or equal to the instruction width");
     };
@@ -66,23 +67,10 @@ private:
 
 struct DecodedInstruction {
     static constexpr auto MAX_OPERANDS{5uz};
-    static constexpr auto BEHAVIOR_COUNT{4uz};
-
-    constexpr void
-    set_operands(std::initializer_list<Operand> operand_list) {
-        for (auto [index, operand] : std::views::enumerate(operand_list)) {
-            operands[index] = operand;
-        }
-    }
-
-    [[nodiscard]] constexpr bool
-    has_behavior(Operand::Behavior behavior) const {
-        return behaviors[std::to_underlying(behavior) - 1];
-    }
 
     Mnemonic mnemonic;
-    std::array<Operand, MAX_OPERANDS> operands{};
-    std::array<bool, BEHAVIOR_COUNT> behaviors{};
+    std::inplace_vector<Operand, MAX_OPERANDS> operands{};
+    Operand::Behavior behaviors{};
 };
 
 } // namespace Revo

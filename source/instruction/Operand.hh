@@ -27,15 +27,15 @@ struct Operand {
         SplitImmediate,
     };
 
+    /* clang-format off */
     enum class Behavior : u8 {
-        None,
-        Record,
-        Link,
-        Absolute,
-        Overflow,
+        None     = 0,
+        Record   = 1 << 0,
+        Link     = 1 << 1,
+        Absolute = 1 << 2,
+        Overflow = 1 << 3,
     };
 
-    /* clang-format off */
     using Variant = std::variant<
         std::monostate,
         Register::GPR,
@@ -79,5 +79,20 @@ struct Operand {
 
     Variant value;
 };
+
+[[nodiscard]] constexpr Operand::Behavior
+operator|(Operand::Behavior rhs, Operand::Behavior lhs) {
+    return static_cast<Operand::Behavior>(std::to_underlying(rhs) | std::to_underlying(lhs));
+}
+
+[[nodiscard]] constexpr Operand::Behavior
+operator&(Operand::Behavior rhs, Operand::Behavior lhs) {
+    return static_cast<Operand::Behavior>(std::to_underlying(rhs) & std::to_underlying(lhs));
+}
+
+constexpr Operand::Behavior&
+operator|=(Operand::Behavior& rhs, Operand::Behavior lhs) {
+    return rhs = (rhs | lhs);
+}
 
 } // namespace Revo

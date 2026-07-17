@@ -12,24 +12,25 @@ Decoder::decode(const ELF& elf) {
     Decoder decoder;
 
     for (const auto& function : elf.functions()) {
-        Function decoded{//
+        Function decoded_function{//
             .instructions = {},
             .relocations = function.relocations,
             .offset = function.offset,
             .size = function.size};
 
-        decoded.instructions.reserve(function.instructions.size());
+        decoded_function.instructions.reserve(function.instructions.size());
 
         for (auto [index, raw] : std::views::enumerate(function.instructions)) {
+            // todo: can this error propagation be cleaner?
             auto result = decode_instruction(Instruction{static_cast<u32>(raw)});
             if (!result) {
                 return std::unexpected(std::format(
                     "{} at {:#x}", result.error(), function.offset + index * sizeof(u32)));
             }
-            decoded.instructions.push_back(*result);
+            decoded_function.instructions.push_back(*result);
         }
 
-        decoder.mFunctions.push_back(std::move(decoded));
+        decoder.mFunctions.push_back(std::move(decoded_function));
     }
 
     Console::info("Decoded {} functions", decoder.mFunctions.size());
@@ -39,37 +40,32 @@ Decoder::decode(const ELF& elf) {
 template <Mnemonic TMnemonic>
 [[nodiscard]] constexpr DecodedInstruction
 Decoder::decode(Instruction instruction) {
-    using Specification = InstructionSpecification::Specification<TMnemonic>;
+    using Specification = InstructionSpecification<TMnemonic>;
     using Layout = Specification::Layout;
 
     DecodedInstruction decoded_instruction{.mnemonic = TMnemonic};
-    auto index{0uz};
 
-    // todo: is this possible without dealiasing? it makes printing disassembly harder
-    // if we ever want to do that
-    template for (constexpr auto field : std::define_static_array(std::meta::template_arguments_of(
-                      std::meta::dealias(^^Layout)))) {
+    template for (constexpr auto field :
+        std::define_static_array(std::meta::template_arguments_of(std::meta::dealias(^^Layout)))) {
         using TField = [:field:];
         if constexpr (TField::operand_type != Operand::Type::None) {
-            decoded_instruction.operands[index++] = Operand::get<TField::operand_type>(
-                instruction.get<TField>());
+            decoded_instruction.operands.push_back(
+                Operand::get<TField::operand_type>(instruction.get<TField>()));
         }
         else if constexpr (TField::operand_behaviour != Operand::Behavior::None) {
-            if constexpr (requires { Specification::implied_behaviours; }) {
-                static_assert(!std::ranges::contains(
-                                  Specification::implied_behaviours, TField::operand_behaviour),
+            if constexpr (HasImpliedBehaviors<Specification>) {
+                static_assert((TField::operand_behaviour & Specification::implied_behaviors) ==
+                        Operand::Behavior::None,
                     "Operand and implied behaviour share one or more flags");
             }
-
-            decoded_instruction.behaviors[std::to_underlying(TField::operand_behaviour) - 1] =
-                instruction.get<TField>() != 0;
+            if (instruction.get<TField>() != 0) {
+                decoded_instruction.behaviors |= TField::operand_behaviour;
+            }
         }
     }
 
-    if constexpr (requires { Specification::implied_behaviours; }) {
-        for (const auto behaviour : Specification::implied_behaviours) {
-            decoded_instruction.behaviors[std::to_underlying(behaviour) - 1] = true;
-        }
+    if constexpr (HasImpliedBehaviors<Specification>) {
+        decoded_instruction.behaviors |= Specification::implied_behaviors;
     }
 
     return decoded_instruction;
@@ -92,13 +88,12 @@ Decoder::decode_instruction(Instruction instruction) {
     template for (constexpr auto enumerator :
         std::define_static_array(std::meta::enumerators_of(^^Mnemonic))) {
         constexpr auto mnemonic = [:enumerator:];
-        using Specification = InstructionSpecification::Specification<mnemonic>;
+        using Specification = InstructionSpecification<mnemonic>;
         constexpr auto xo_field = get_xo_field(^^typename Specification::Layout);
 
         if (opcd == Specification::opcd) {
             if constexpr (xo_field != std::meta::info{}) {
-                static_assert(
-                    requires { Specification::xo; },
+                static_assert(HasExtendedOpcode<Specification>,
                     "Layout has an extended opcode but the instruction specification doesn't "
                     "provide the required fields");
                 using TXOField = [:xo_field:];
