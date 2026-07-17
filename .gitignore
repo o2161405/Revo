@@ -2,3 +2,4 @@ __pycache__
 build
 build.ninja
 out
+.vscode

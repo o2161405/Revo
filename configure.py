@@ -38,7 +38,6 @@ common_ccflags = [
     '-pedantic-errors',
     '-fno-asynchronous-unwind-tables',
     '-I', 'source',
-    '-include', 'source/util/Assert.hh',
     '-include', 'source/util/Types.hh',
     '-include', 'source/util/Console.hh',
     '-fno-rtti',

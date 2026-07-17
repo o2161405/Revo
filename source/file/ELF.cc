@@ -5,7 +5,7 @@
 
 #include <algorithm>
 
-namespace Revo::File {
+namespace Revo {
 
 std::expected<ELF, std::string>
 ELF::parse(const std::filesystem::path& path) {
@@ -199,6 +199,10 @@ ELF::parse_revo_relocations(std::ifstream& stream) {
 
             Console::info("Parsed {} Revo relocations", mRevoRelocations.size());
             return {};
+        })
+        .or_else([](const auto&) -> std::expected<void, std::string> {
+            Console::info("No relocation section found, attempting parse anyway");
+            return {};
         });
 }
 
@@ -214,7 +218,8 @@ ELF::parse_revo_functions(std::ifstream& stream) {
 
             for (const auto& symbol : mSymbols) {
                 if (symbol.type() != STT_FUNC || symbol.st_shndx != input_index) {
-                    Console::debug("Skipped symbol {:#x}: type {} (expected {}), st_shndx {} (expected {})", 
+                    Console::debug(
+                        "Skipped symbol {:#x}: type {} (expected {}), st_shndx {} (expected {})",
                         symbol.st_value, symbol.type(), STT_FUNC, symbol.st_shndx, input_index);
                     continue;
                 }
@@ -224,34 +229,42 @@ ELF::parse_revo_functions(std::ifstream& stream) {
                         std::format("function {:#x} has zero size", symbol.st_value));
                 }
 
+                if (symbol.st_size % sizeof(u32) != 0) {
+                    return std::unexpected(
+                        std::format("function {:#x} size ({}) is not a multiple of 4 bytes",
+                            symbol.st_value, symbol.st_size));
+                }
+
                 if (!input_header.contains(symbol)) {
                     return std::unexpected(
                         std::format("function {:#x} isn't contained within the input section",
                             symbol.st_value));
                 }
 
-                std::vector<std::byte> bytes{symbol.st_size};
+                std::vector<u32> instructions(symbol.st_size / sizeof(u32));
 
                 stream.seekg(input_header.sh_offset + symbol.st_value - input_header.sh_addr);
-                if (!stream.read(reinterpret_cast<char*>(bytes.data()), bytes.size())) {
+
+                if (!stream.read(reinterpret_cast<char*>(instructions.data()), symbol.st_size)) {
                     return std::unexpected("reached EOF whilst reading function bytes");
                 }
 
-                std::flat_map<RelativeOffset, std::vector<std::reference_wrapper<const Rela>>>
-                    relocations;
+                Util::byteswap(instructions);
+
+                std::flat_map<RelativeOffset, std::vector<Rela>> relocations;
 
                 for (auto [index, rela] : std::views::enumerate(mRevoRelocations)) {
                     if (symbol.contains(rela.r_offset)) {
                         assigned_relocations[index] = true;
-                        relocations[rela.r_offset - symbol.st_value].push_back(std::ref(rela));
+                        relocations[rela.r_offset - symbol.st_value].push_back(rela);
 
-                        Console::debug("Relocation {:#x} assigned to function {:#x}", 
-                            rela.r_offset, symbol.st_value);
+                        Console::debug("Relocation {:#x} assigned to function {:#x}", rela.r_offset,
+                            symbol.st_value);
                     }
                 }
 
                 mRevoFunctions.push_back(Function{//
-                    .bytes = std::move(bytes),
+                    .instructions = std::move(instructions),
                     .relocations = std::move(relocations),
                     .offset = symbol.st_value,
                     .size = symbol.st_size});
@@ -289,4 +302,4 @@ ELF::get_section(std::string_view specified_section) const {
     return std::unexpected(std::format("failed to find section {}", specified_section));
 }
 
-} // namespace Revo::File
+} // namespace Revo

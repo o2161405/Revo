@@ -1,5 +1,7 @@
 #pragma once
 
+#include "file/Function.hh"
+
 #include <array>
 #include <expected>
 #include <filesystem>
@@ -9,7 +11,7 @@
 #include <string>
 #include <vector>
 
-namespace Revo::File {
+namespace Revo {
 
 class ELF {
 public:
@@ -43,17 +45,17 @@ public:
         u8 st_other;
         u16 st_shndx;
 
-        [[nodiscard]] u8
+        [[nodiscard]] constexpr u8
         type() const {
             return st_info & 0xF;
         }
 
-        [[nodiscard]] u8
+        [[nodiscard]] constexpr u8
         bind() const {
             return st_info >> 4;
         }
 
-        [[nodiscard]] bool
+        [[nodiscard]] constexpr bool
         contains(u32 address) const {
             return address >= st_value && address < (st_value + st_size);
         }
@@ -71,7 +73,7 @@ public:
         u32 sh_addralign;
         u32 sh_entsize;
 
-        [[nodiscard]] bool
+        [[nodiscard]] constexpr bool
         contains(const Symbol& symbol) const {
             if (symbol.st_value < sh_addr) {
                 return false;
@@ -91,56 +93,56 @@ public:
         u32 r_info;
         s32 r_addend;
 
-        [[nodiscard]] u32
+        [[nodiscard]] constexpr u32
         symbol_index() const {
             return r_info >> 8;
         }
 
-        [[nodiscard]] u8
+        [[nodiscard]] constexpr u8
         type() const {
             return r_info & 0xFF;
         }
     };
 #pragma pack(pop)
 
-    struct Function {
-        std::vector<std::byte> bytes;
-        std::flat_map<RelativeOffset, std::vector<std::reference_wrapper<const Rela>>> relocations;
-        u32 offset;
-        u32 size;
-    };
+    using Function = FunctionImpl<u32, RelativeOffset, Rela>;
 
-    static std::expected<ELF, std::string>
+    [[nodiscard]] const std::vector<Function>&
+    functions() const {
+        return mRevoFunctions;
+    }
+
+    [[nodiscard]] static std::expected<ELF, std::string>
     parse(const std::filesystem::path& path);
 
-    static std::expected<ELF, std::string>
+    [[nodiscard]] static std::expected<ELF, std::string>
     parse(std::ifstream& stream);
 
 private:
     ELF() = default;
 
     // --- Parsing steps ---
-    std::expected<void, std::string>
+    [[nodiscard]] std::expected<void, std::string>
     parse_elf_header(std::ifstream& stream);
 
-    std::expected<void, std::string>
+    [[nodiscard]] std::expected<void, std::string>
     parse_section_headers(std::ifstream& stream);
 
-    std::expected<void, std::string>
+    [[nodiscard]] std::expected<void, std::string>
     parse_string_table(std::ifstream& stream);
 
-    std::expected<void, std::string>
+    [[nodiscard]] std::expected<void, std::string>
     parse_symbol_table(std::ifstream& stream);
 
-    std::expected<void, std::string>
+    [[nodiscard]] std::expected<void, std::string>
     parse_revo_relocations(std::ifstream& stream);
 
-    std::expected<void, std::string>
+    [[nodiscard]] std::expected<void, std::string>
     parse_revo_functions(std::ifstream& stream);
 
     // --- Utility functions ---
     using SectionIndex = u32;
-    std::expected<std::pair<ELF::SectionIndex, ELF::SectionHeader>, std::string>
+    [[nodiscard]] std::expected<std::pair<ELF::SectionIndex, ELF::SectionHeader>, std::string>
     get_section(std::string_view specified_section) const;
 
     // --- Member variables ---
@@ -156,4 +158,4 @@ private:
     std::vector<Function> mRevoFunctions;
 };
 
-} // namespace Revo::File
+} // namespace Revo

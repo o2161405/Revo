@@ -21,7 +21,9 @@ BinPackArguments: True
 BinPackParameters: true
 BitFieldColonSpacing: Both
 BreakBeforeBinaryOperators: None
-BreakBeforeBraces: Attach
+BreakBeforeBraces: Custom
+BraceWrapping:
+  BeforeElse: true
 BreakBeforeTernaryOperators: False
 BreakStringLiterals: True
 ColumnLimit: 100

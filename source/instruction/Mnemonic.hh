@@ -1,0 +1,31 @@
+#pragma once
+
+// --- THINGS TO KEEP IN MIND WHEN ADDING MNEMONICS ---
+// 1. Instructions that are actually aliases for more complicated
+// instructions (e.g. `blr` actually being a `bclr` with hardcoded
+// fields) are represented as THE BASE INSTRUCTION, do NOT add the
+// simplified ones!!!!
+
+namespace Revo {
+
+enum class Mnemonic {
+    STW,
+    LWZ,
+    BCLR,
+    ADD,
+    SUBF,
+    MULLW,
+    ANDI_RC, // 'andi.`, there isnt a plain `andi` instruction
+    XOR,
+    OR,
+    RLWINM,
+    ADDI,
+    CMPI,
+    BC,
+    B,
+    CMP,
+    MTSPR,
+    ADDIC_RC, // `addic.`, seperate opcode from `addic`
+};
+
+} // namespace Revo

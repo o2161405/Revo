@@ -3,8 +3,8 @@
 #include <atomic>
 #include <format>
 #include <print>
-#include <utility>
 #include <string_view>
+#include <utility>
 
 namespace Revo {
 
@@ -27,39 +27,39 @@ public:
         return mLogLevel.load(std::memory_order_relaxed);
     }
 
-    template <typename... Args>
+    template <typename... TArgs>
     static void
-    error(std::format_string<Args...> string, Args&&... args) {
+    error(std::format_string<TArgs...> string, TArgs&&... args) {
         if (get_level() >= LogLevel::Error) {
             std::println(stderr, "{}[ERROR]{}   {}", ERROR_COLOR, RESET_COLOR,
-                std::format(string, std::forward<Args>(args)...));
+                std::format(string, std::forward<TArgs>(args)...));
         }
     }
 
-    template <typename... Args>
+    template <typename... TArgs>
     static void
-    info(std::format_string<Args...> string, Args&&... args) {
+    info(std::format_string<TArgs...> string, TArgs&&... args) {
         if (get_level() >= LogLevel::Info) {
             std::println(stdout, "{}[INFO]{}    {}", INFO_COLOR, RESET_COLOR,
-                std::format(string, std::forward<Args>(args)...));
+                std::format(string, std::forward<TArgs>(args)...));
         }
     }
 
-    template <typename... Args>
+    template <typename... TArgs>
     static void
-    debug(std::format_string<Args...> string, Args&&... args) {
+    debug(std::format_string<TArgs...> string, TArgs&&... args) {
         if (get_level() >= LogLevel::Debug) {
             std::println(stdout, "{}[DEBUG]{}   {}", DEBUG_COLOR, RESET_COLOR,
-                std::format(string, std::forward<Args>(args)...));
+                std::format(string, std::forward<TArgs>(args)...));
         }
     }
 
-    template <typename... Args>
+    template <typename... TArgs>
     static void
-    success(std::format_string<Args...> string, Args&&... args) {
+    success(std::format_string<TArgs...> string, TArgs&&... args) {
         if (get_level() >= LogLevel::Info) {
             std::println(stdout, "{}[SUCCESS]{} {}", SUCCESS_COLOR, RESET_COLOR,
-                std::format(string, std::forward<Args>(args)...));
+                std::format(string, std::forward<TArgs>(args)...));
         }
     }
 
