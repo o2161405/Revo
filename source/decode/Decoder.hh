@@ -1,49 +1,51 @@
 #pragma once
 
-#include "file/ELF.hh"
-#include "file/Function.hh"
+#include "elf/Function.hh"
+#include "elf/Parser.hh"
 #include "instruction/Instruction.hh"
 #include "instruction/Mnemonic.hh"
 #include "instruction/Operand.hh"
+#include "instruction/Specification.hh"
+
+#include <expected>
+#include <meta>
 
 namespace Revo {
 
 class Decoder {
 public:
-    using Function = FunctionImpl<DecodedInstruction, ELF::RelativeOffset, ELF::Rela>;
+    using Function = ELF::FunctionImpl<DecodedInstruction>;
 
     [[nodiscard]] static std::expected<Decoder, std::string>
-    decode(const ELF& elf);
+    decode(const std::vector<ELF::Parser::Function>& functions);
 
 private:
     Decoder() = default;
 
-    template <typename TField>
-    static constexpr bool is_extended_opcode_v = requires { requires TField::is_extended_opcode; };
-
-    template <typename TField>
-    static constexpr Operand::Role default_role_v = [] {
-        if constexpr (requires { TField::role; }) {
-            return TField::role;
-        }
-        else if constexpr (TField::operand_type == Operand::Type::GPR ||
-            TField::operand_type == Operand::Type::FPR ||
-            TField::operand_type == Operand::Type::CR) {
-            return Operand::Role::Read;
-        }
-        else {
-            return Operand::Role::None;
-        }
-    }();
-
     // --- Decoding steps ---
+    [[nodiscard]] static std::expected<DecodedInstruction, std::string>
+    decode_instruction(Instruction instruction);
+
     template <Mnemonic TMnemonic>
     [[nodiscard]] static constexpr DecodedInstruction
     decode(Instruction instruction);
 
     // --- Utility functions ---
-    [[nodiscard]] static std::expected<DecodedInstruction, std::string>
-    decode_instruction(Instruction instruction);
+    [[nodiscard]] static consteval bool
+    is_register(Operand::Type type) {
+        return type == Operand::Type::GPR || type == Operand::Type::FPR ||
+            type == Operand::Type::SPR || type == Operand::Type::CR;
+    }
+
+    template <typename... TFields, u32... TValues>
+    [[nodiscard]] constexpr bool
+    valid_constants(Instruction instruction, FieldConstants<FieldConstant<TFields, TValues>...>) {
+        return ((instruction.get<TFields>() == TValues) && ...);
+    }
+
+    template <typename TSpecification, typename TField>
+    [[nodiscard]] static consteval Operand::Access
+    get_access_type();
 
     // --- Member variables ---
     std::vector<Function> mFunctions;

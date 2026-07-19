@@ -13,7 +13,6 @@ namespace Revo {
 class Instruction {
 public:
     static constexpr u32 INSTRUCTION_WIDTH = 32;
-    static constexpr u32 INSTRUCTION_WIDTH_INDEX = INSTRUCTION_WIDTH - 1;
 
     template <u8 TStartIndex, u8 TEndIndex, typename TDataType,
         Operand::Type TOperandType = Operand::Type::None,
@@ -25,11 +24,12 @@ public:
 
         static_assert(TStartIndex <= TEndIndex, //
             "Start index must be less than or equal to the end index");
-        static_assert(TEndIndex <= INSTRUCTION_WIDTH_INDEX,
+        static_assert(TEndIndex < INSTRUCTION_WIDTH,
             "End index must be less than or equal to the instruction width");
         static constexpr u8 bits = TEndIndex - TStartIndex + 1;
-        static constexpr u8 shift = static_cast<u8>(INSTRUCTION_WIDTH_INDEX - TEndIndex);
+        static constexpr u8 shift = static_cast<u8>(INSTRUCTION_WIDTH - TEndIndex - 1);
         static constexpr u32 mask = (1ULL << bits) - 1;
+        static constexpr bool is_extended_opcode = false;
     };
 
     template <u8 TStartIndex, u8 TEndIndex>
@@ -40,11 +40,35 @@ public:
     template <typename... TFields>
     struct Layout {
         static constexpr u32 bits = (0uz + ... + TFields::bits);
+        static constexpr u32 mask = (0u | ... | (TFields::mask << TFields::shift));
+        static constexpr bool has_extended_opcode = (false || ... || TFields::is_extended_opcode);
         static_assert(bits <= INSTRUCTION_WIDTH,
             "Instruction layout must be less than or equal to the instruction width");
+        static_assert(std::popcount(mask) == bits,
+            std::format("Instruction layout defines {} total bits are used, but due to one or more "
+                        "incorrect shifts, {} total bits are used",
+                bits, mask));
+
+        [[nodiscard]] static constexpr bool
+        uses_reserved_bits(u32 raw) {
+            return (raw & ~mask) != 0;
+        }
+
+        /* clang-format off */
+        [[nodiscard]] static constexpr u16
+        extended_opcode(u32 raw) {
+            return (0u | ... | (TFields::is_extended_opcode ?
+                        static_cast<u16>((raw >> TFields::shift) & TFields::mask) : 0u));
+        }
+        /* clang-format on */
     };
 
     constexpr explicit Instruction(u32 raw) : mRaw(raw) {}
+
+    [[nodiscard]] constexpr u32
+    raw() const {
+        return mRaw;
+    }
 
     template <typename TField>
     [[nodiscard]] constexpr auto
@@ -71,12 +95,6 @@ struct DecodedInstruction {
     Mnemonic mnemonic;
     std::inplace_vector<Operand, MAX_OPERANDS> operands{};
     Operand::Behavior behaviors{};
-
-    [[nodiscard]] constexpr auto
-    by_role(Operand::Role role) const {
-        return operands |
-            std::views::filter([role](const Operand& operand) { return operand.role == role; });
-    }
 };
 
 } // namespace Revo

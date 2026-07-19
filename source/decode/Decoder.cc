@@ -1,7 +1,6 @@
 #include "Decoder.hh"
 
 #include "instruction/Layout.hh"
-#include "instruction/Specification.hh"
 
 #include <algorithm>
 #include <meta>
@@ -9,10 +8,10 @@
 namespace Revo {
 
 std::expected<Decoder, std::string>
-Decoder::decode(const ELF& elf) {
+Decoder::decode(const std::vector<ELF::Parser::Function>& functions) {
     Decoder decoder;
 
-    for (const auto& function : elf.functions()) {
+    for (const auto& function : functions) {
         Function decoded_function{//
             .instructions = {},
             .relocations = function.relocations,
@@ -38,6 +37,45 @@ Decoder::decode(const ELF& elf) {
     return decoder;
 }
 
+std::expected<DecodedInstruction, std::string>
+Decoder::decode_instruction(Instruction instruction) {
+    const auto opcd = instruction.get<InstructionLayout::OPCD>();
+
+    template for (constexpr auto enumerator :
+        std::define_static_array(std::meta::enumerators_of(^^Mnemonic))) {
+        constexpr auto mnemonic = [:enumerator:];
+        using Specification = InstructionSpecification<mnemonic>;
+
+        if (opcd != Specification::opcd) {
+            continue;
+        }
+
+        if constexpr (HasFieldConstants<Specification>) {
+            if (!valid_constants(instruction, typename Specification::Constants{})) {
+                continue;
+            }
+        }
+
+        using Layout = Specification::Layout;
+        if constexpr (Layout::has_extended_opcode) {
+            static_assert(HasExtendedOpcode<Specification>,
+                "Layout has an extended opcode but the instruction specification doesn't "
+                "provide the required fields");
+            if (Layout::extended_opcode(instruction.raw()) != Specification::xo) {
+                continue;
+            }
+        }
+
+        if (Specification::Layout::uses_reserved_bits(instruction.raw())) {
+            return std::unexpected(std::format("reserved bits set ({:#010x})", instruction.raw()));
+        }
+
+        return decode<mnemonic>(instruction);
+    }
+
+    return std::unexpected(std::format("unimplemented opcode ({})", opcd));
+}
+
 template <Mnemonic TMnemonic>
 [[nodiscard]] constexpr DecodedInstruction
 Decoder::decode(Instruction instruction) {
@@ -47,16 +85,20 @@ Decoder::decode(Instruction instruction) {
     static constexpr auto fields = std::define_static_array(
         std::meta::template_arguments_of(std::meta::dealias(^^Layout)));
 
-    if constexpr (requires { typename Specification::ZeroGPRField; }) {
+    if constexpr (HasZeroableField<Specification>) {
         static_assert(std::ranges::contains(
-                          fields, std::meta::dealias(^^typename Specification::ZeroGPRField)),
-            "ZeroGPRField isn't a field of the instruction's layout");
+                          fields, std::meta::dealias(^^typename Specification::ZeroableField)),
+            "ZeroableField isn't a field of the instruction's layout");
     }
 
-    if constexpr (requires { typename Specification::DestinationField; }) {
-        static_assert(std::ranges::contains(
-                          fields, std::meta::dealias(^^typename Specification::DestinationField)),
-            "DestinationField isn't a field of the instruction's layout");
+    if constexpr (HasAccesses<Specification>) {
+        template for (constexpr auto entry :
+            std::define_static_array(std::meta::template_arguments_of(
+                std::meta::dealias(^^typename Specification::Accesses)))) {
+            static_assert(std::ranges::contains(fields,
+                              std::meta::dealias(std::meta::template_arguments_of(entry)[0])),
+                "Accesses entry references a field that isn't in the instruction's layout");
+        }
     }
 
     DecodedInstruction decoded_instruction{.mnemonic = TMnemonic};
@@ -64,20 +106,19 @@ Decoder::decode(Instruction instruction) {
     template for (constexpr auto field : fields) {
         using TField = [:field:];
         if constexpr (TField::operand_type != Operand::Type::None) {
+            constexpr auto access = get_access_type<Specification, TField>();
+            if constexpr (is_register(TField::operand_type)) {
+                static_assert(access != Operand::Access::None,
+                    "Register field is missing from the specification's Accesses map");
+            }
+
             const auto value = instruction.get<TField>();
-
-            constexpr auto role = IsDestinationField<Specification, TField> ?
-                Operand::Role::Write :
-                default_role_v<TField>;
-
-            if constexpr (IsZeroableField<Specification, TField>) {
-                decoded_instruction.operands.push_back(value == 0 ?
-                        Operand::get<Operand::Type::Immediate>(0) :
-                        Operand::get<TField::operand_type>(value, role));
+            if (IsZeroableField<Specification, TField> && value == 0) {
+                decoded_instruction.operands.push_back(Operand::get<Operand::Type::Immediate>(0));
             }
             else {
                 decoded_instruction.operands.push_back(
-                    Operand::get<TField::operand_type>(value, role));
+                    Operand::get<TField::operand_type>(value, access));
             }
         }
         else if constexpr (TField::operand_behaviour != Operand::Behavior::None) {
@@ -99,43 +140,28 @@ Decoder::decode(Instruction instruction) {
     return decoded_instruction;
 }
 
-std::expected<DecodedInstruction, std::string>
-Decoder::decode_instruction(Instruction instruction) {
-    constexpr auto get_xo_field = [](std::meta::info layout) consteval -> std::meta::info {
-        for (auto field : std::meta::template_arguments_of(std::meta::dealias(layout))) {
-            if (std::meta::extract<bool>(
-                    std::meta::substitute(^^Decoder::is_extended_opcode_v, {field}))) {
-                return field;
-            }
-        }
-        return {};
-    };
-
-    const auto opcd = instruction.get<InstructionLayout::OPCD>();
-
-    template for (constexpr auto enumerator :
-        std::define_static_array(std::meta::enumerators_of(^^Mnemonic))) {
-        constexpr auto mnemonic = [:enumerator:];
-        using Specification = InstructionSpecification<mnemonic>;
-        constexpr auto xo_field = get_xo_field(^^typename Specification::Layout);
-
-        if (opcd == Specification::opcd) {
-            if constexpr (xo_field != std::meta::info{}) {
-                static_assert(HasExtendedOpcode<Specification>,
-                    "Layout has an extended opcode but the instruction specification doesn't "
-                    "provide the required fields");
-                using TXOField = [:xo_field:];
-                if (instruction.get<TXOField>() == Specification::xo) {
-                    return decode<mnemonic>(instruction);
-                }
-            }
-            else {
-                return decode<mnemonic>(instruction);
-            }
-        }
+template <typename TSpecification, typename TField>
+[[nodiscard]] consteval Operand::Access
+Decoder::get_access_type() {
+    if constexpr (!is_register(TField::operand_type)) {
+        return Operand::Access::None;
     }
+    else {
+        static_assert(
+            HasAccesses<TSpecification>,
+            "Layout has register fields but the specification doesn't provide an "
+            "Accesses map");
 
-    return std::unexpected(std::format("unimplemented opcode ({})", opcd));
+        for (auto field_access : std::meta::template_arguments_of(
+                 std::meta::dealias(^^typename TSpecification::Accesses))) {
+            auto arguments = std::meta::template_arguments_of(std::meta::dealias(field_access));
+            if (std::meta::dealias(arguments[0] /*field*/) == std::meta::dealias(^^TField)) {
+                return std::meta::extract<Operand::Access>(arguments[1] /*access*/);
+            }
+        }
+
+        return Operand::Access::None;
+    }
 }
 
 } // namespace Revo

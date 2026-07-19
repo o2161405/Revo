@@ -4,14 +4,14 @@ namespace Revo {
 
 /**
  * @brief Instruction mnemonics
- * 
+ *
  * Lists the different mnemonics in the PowerPC ISA.
- * 
+ *
  * @note When adding new mnemonics, ensure the instruction you're adding isn't an
  * alias for another instruction, for example:
  * - `blr` being `bclr` with hardcoded fields
  * - `subic.` being `addic.` with a flipped sign
- * 
+ *
  * @note If the instruction you're adding *is* an alias, **implement the base
  * instruction instead** if it hasn't been already.
  */

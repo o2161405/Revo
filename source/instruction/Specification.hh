@@ -7,6 +7,8 @@
 
 namespace Revo {
 
+using namespace InstructionLayout;
+
 /**
  * @brief API for whether a specification has an extended opcode.
  *
@@ -44,6 +46,15 @@ concept HasExtendedOpcode = requires { TSpecification::xo; };
  */
 template <typename TSpecification>
 concept HasImpliedBehaviors = requires { TSpecification::implied_behaviors; };
+
+template <typename TSpecification>
+concept HasFieldConstants = requires { typename TSpecification::Constants; };
+
+template <typename TSpecification>
+concept HasZeroableField = requires { typename TSpecification::ZeroableField; };
+
+template <typename TSpecification>
+concept HasAccesses = requires { typename TSpecification::Accesses; };
 
 /**
  * @brief API for whether a specification field is zeroable.
@@ -89,12 +100,24 @@ concept IsDestinationField = requires {
     requires std::same_as<typename TSpecification::DestinationField, TField>;
 };
 
+template <typename TField, Operand::Access TAccess>
+struct FieldAccess {};
+
+template <typename... TFieldAccesses>
+struct FieldAccesses {};
+
+template <typename TField, u32 TValue>
+struct FieldConstant {};
+
+template <typename... TFieldConstants>
+struct FieldConstants {};
+
 /**
  * @brief Specification for an instruction.
- * 
+ *
  * Every Mnemonic **must** have a template specialization of this struct, which
  * provides the information needed for the decoder to work correctly.
- * 
+ *
  * An instruction **must** provide:
  * - A primary opcode
  *     ```c++
@@ -102,9 +125,16 @@ concept IsDestinationField = requires {
  *     ```
  * - An instruction layout
  *     ```c++
- *     using Layout = InstructionLayout::XForm::Impl_RS_RA_RB_XO_Rc;
+ *     using Layout = XForm::Impl_RS_RA_RB_XO_Rc;
  *     ```
- * 
+ * - (If an instruction layout references a register field) Field access types:
+ *     ```c++
+ *     using Accesses =
+ *         FieldAccesses<FieldAccess<DForm::RT, Operand::Access::Write>,
+ *             FieldAccess<DForm::RA, Operand::Access::Read>,
+ *             FieldAccess<DForm::D, Operand::Access::Read>>;
+ *     ```
+ *
  * In addition to the required fields, an instruction may also provide:
  * - An extended opcode
  *     ```c++
@@ -112,15 +142,15 @@ concept IsDestinationField = requires {
  *     ```
  * - A zeroable field
  *     ```c++
- *     using ZeroableField = InstructionLayout::DForm::RA;
+ *     using ZeroableField = DForm::RA;
  *     ```
  * - A destination field
  *     ```c++
- *     using DestinationField = InstructionLayout::DForm::RA;
+ *     using DestinationField = DForm::RA;
  *     ```
- * 
+ *
  * The given values **must** be derived using by the PPC ISA.
- * 
+ *
  * @tparam TMnemonic The instructoin mnemonic to be implemented.
  */
 template <Mnemonic TMnemonic>
@@ -129,23 +159,29 @@ struct InstructionSpecification;
 /// \cond
 template <>
 struct InstructionSpecification<Mnemonic::STW> {
-    using Layout = InstructionLayout::DForm::Impl_RS_RA_D;
-    using ZeroableField = InstructionLayout::DForm::RA;
+    using Layout = DForm::Impl_RS_RA_D;
+    using ZeroableField = DForm::RA;
+    using Accesses = FieldAccesses< //
+        FieldAccess<DForm::RS, Operand::Access::Read>,
+        FieldAccess<DForm::RA, Operand::Access::Read>>;
 
     static constexpr u8 opcd = 36;
 };
 
 template <>
 struct InstructionSpecification<Mnemonic::LWZ> {
-    using Layout = InstructionLayout::DForm::Impl_RT_RA_D;
-    using ZeroableField = InstructionLayout::DForm::RA;
+    using Layout = DForm::Impl_RT_RA_D;
+    using ZeroableField = DForm::RA;
+    using Accesses = FieldAccesses< //
+        FieldAccess<DForm::RT, Operand::Access::Write>,
+        FieldAccess<DForm::RA, Operand::Access::Read>>;
 
     static constexpr u8 opcd = 32;
 };
 
 template <>
 struct InstructionSpecification<Mnemonic::BCLR> {
-    using Layout = InstructionLayout::XLForm::Impl_BO_BI_BH_XO_LK;
+    using Layout = XLForm::Impl_BO_BI_BH_XO_LK;
 
     static constexpr u8 opcd = 19;
     static constexpr u16 xo = 16;
@@ -153,7 +189,11 @@ struct InstructionSpecification<Mnemonic::BCLR> {
 
 template <>
 struct InstructionSpecification<Mnemonic::ADD> {
-    using Layout = InstructionLayout::XOForm::Impl_RT_RA_RB_OE_XO_Rc;
+    using Layout = XOForm::Impl_RT_RA_RB_OE_XO_Rc;
+    using Accesses = FieldAccesses< //
+        FieldAccess<XOForm::RT, Operand::Access::Write>,
+        FieldAccess<XOForm::RA, Operand::Access::Read>,
+        FieldAccess<XOForm::RB, Operand::Access::Read>>;
 
     static constexpr u8 opcd = 31;
     static constexpr u16 xo = 266;
@@ -161,7 +201,11 @@ struct InstructionSpecification<Mnemonic::ADD> {
 
 template <>
 struct InstructionSpecification<Mnemonic::SUBF> {
-    using Layout = InstructionLayout::XOForm::Impl_RT_RA_RB_OE_XO_Rc;
+    using Layout = XOForm::Impl_RT_RA_RB_OE_XO_Rc;
+    using Accesses = FieldAccesses< //
+        FieldAccess<XOForm::RT, Operand::Access::Write>,
+        FieldAccess<XOForm::RA, Operand::Access::Read>,
+        FieldAccess<XOForm::RB, Operand::Access::Read>>;
 
     static constexpr u8 opcd = 31;
     static constexpr u16 xo = 40;
@@ -169,7 +213,11 @@ struct InstructionSpecification<Mnemonic::SUBF> {
 
 template <>
 struct InstructionSpecification<Mnemonic::MULLW> {
-    using Layout = InstructionLayout::XOForm::Impl_RT_RA_RB_OE_XO_Rc;
+    using Layout = XOForm::Impl_RT_RA_RB_OE_XO_Rc;
+    using Accesses = FieldAccesses< //
+        FieldAccess<XOForm::RT, Operand::Access::Write>,
+        FieldAccess<XOForm::RA, Operand::Access::Read>,
+        FieldAccess<XOForm::RB, Operand::Access::Read>>;
 
     static constexpr u8 opcd = 31;
     static constexpr u16 xo = 235;
@@ -177,8 +225,11 @@ struct InstructionSpecification<Mnemonic::MULLW> {
 
 template <>
 struct InstructionSpecification<Mnemonic::ANDI_RC> {
-    using Layout = InstructionLayout::DForm::Impl_RS_RA_UI;
-    using DestinationField = InstructionLayout::DForm::RA;
+    using Layout = DForm::Impl_RS_RA_UI;
+    using DestinationField = DForm::RA;
+    using Accesses = FieldAccesses< //
+        FieldAccess<DForm::RS, Operand::Access::Read>,
+        FieldAccess<DForm::RA, Operand::Access::Write>>;
 
     static constexpr u8 opcd = 28;
     static constexpr auto implied_behaviors = Operand::Behavior::Record;
@@ -186,8 +237,12 @@ struct InstructionSpecification<Mnemonic::ANDI_RC> {
 
 template <>
 struct InstructionSpecification<Mnemonic::XOR> {
-    using Layout = InstructionLayout::XForm::Impl_RS_RA_RB_XO_Rc;
-    using DestinationField = InstructionLayout::XForm::RA;
+    using Layout = XForm::Impl_RS_RA_RB_XO_Rc;
+    using DestinationField = XForm::RA;
+    using Accesses = FieldAccesses< //
+        FieldAccess<XForm::RS, Operand::Access::Read>,
+        FieldAccess<XForm::RA, Operand::Access::Write>,
+        FieldAccess<XForm::RB, Operand::Access::Read>>;
 
     static constexpr u8 opcd = 31;
     static constexpr u16 xo = 316;
@@ -195,8 +250,12 @@ struct InstructionSpecification<Mnemonic::XOR> {
 
 template <>
 struct InstructionSpecification<Mnemonic::OR> {
-    using Layout = InstructionLayout::XForm::Impl_RS_RA_RB_XO_Rc;
-    using DestinationField = InstructionLayout::XForm::RA;
+    using Layout = XForm::Impl_RS_RA_RB_XO_Rc;
+    using DestinationField = XForm::RA;
+    using Accesses = FieldAccesses< //
+        FieldAccess<XForm::RS, Operand::Access::Read>,
+        FieldAccess<XForm::RA, Operand::Access::Write>,
+        FieldAccess<XForm::RB, Operand::Access::Read>>;
 
     static constexpr u8 opcd = 31;
     static constexpr u16 xo = 444;
@@ -204,44 +263,57 @@ struct InstructionSpecification<Mnemonic::OR> {
 
 template <>
 struct InstructionSpecification<Mnemonic::RLWINM> {
-    using Layout = InstructionLayout::MForm::Impl_RS_RA_SH_MB_ME_Rc;
-    using DestinationField = InstructionLayout::MForm::RA;
+    using Layout = MForm::Impl_RS_RA_SH_MB_ME_Rc;
+    using DestinationField = MForm::RA;
+    using Accesses = FieldAccesses< //
+        FieldAccess<MForm::RS, Operand::Access::Read>,
+        FieldAccess<MForm::RA, Operand::Access::Write>>;
 
     static constexpr u8 opcd = 21;
 };
 
 template <>
 struct InstructionSpecification<Mnemonic::ADDI> {
-    using Layout = InstructionLayout::DForm::Impl_RT_RA_SI;
-    using ZeroableField = InstructionLayout::DForm::RA;
+    using Layout = DForm::Impl_RT_RA_SI;
+    using ZeroableField = DForm::RA;
+    using Accesses = FieldAccesses< //
+        FieldAccess<DForm::RT, Operand::Access::Write>,
+        FieldAccess<DForm::RA, Operand::Access::Read>>;
 
     static constexpr u8 opcd = 14;
 };
 
 template <>
 struct InstructionSpecification<Mnemonic::CMPI> {
-    using Layout = InstructionLayout::DForm::Impl_BF_L_RA_SI;
+    using Layout = DForm::Impl_BF_L_RA_SI;
+    using Accesses = FieldAccesses< //
+        FieldAccess<DForm::BF, Operand::Access::Write>,
+        FieldAccess<DForm::RA, Operand::Access::Read>>;
 
     static constexpr u8 opcd = 11;
 };
 
 template <>
 struct InstructionSpecification<Mnemonic::BC> {
-    using Layout = InstructionLayout::BForm::Impl;
+    using Layout = BForm::Impl;
 
     static constexpr u8 opcd = 16;
 };
 
 template <>
 struct InstructionSpecification<Mnemonic::B> {
-    using Layout = InstructionLayout::IForm::Impl;
+    using Layout = IForm::Impl;
 
     static constexpr u8 opcd = 18;
 };
 
 template <>
 struct InstructionSpecification<Mnemonic::CMP> {
-    using Layout = InstructionLayout::XForm::Impl_BF_L10_RA_RB_XO;
+    using Layout = XForm::Impl_BF_L10_RA_RB_XO;
+    using Accesses = FieldAccesses< //
+        FieldAccess<XForm::BF, Operand::Access::Write>,
+        FieldAccess<XForm::RA, Operand::Access::Read>,
+        FieldAccess<XForm::RB, Operand::Access::Read>>;
 
     static constexpr u8 opcd = 31;
     static constexpr u16 xo = 0;
@@ -249,7 +321,10 @@ struct InstructionSpecification<Mnemonic::CMP> {
 
 template <>
 struct InstructionSpecification<Mnemonic::MTSPR> {
-    using Layout = InstructionLayout::XFXForm::Impl_RS_SPR_XO;
+    using Layout = XFXForm::Impl_RS_SPR_XO;
+    using Accesses = FieldAccesses< //
+        FieldAccess<XFXForm::RS, Operand::Access::Read>,
+        FieldAccess<XFXForm::SPR, Operand::Access::Write>>;
 
     static constexpr u8 opcd = 31;
     static constexpr u16 xo = 467;
@@ -257,7 +332,10 @@ struct InstructionSpecification<Mnemonic::MTSPR> {
 
 template <>
 struct InstructionSpecification<Mnemonic::ADDIC_RC> {
-    using Layout = InstructionLayout::DForm::Impl_RT_RA_SI;
+    using Layout = DForm::Impl_RT_RA_SI;
+    using Accesses = FieldAccesses< //
+        FieldAccess<DForm::RT, Operand::Access::Write>,
+        FieldAccess<DForm::RA, Operand::Access::Read>>;
 
     static constexpr u8 opcd = 13;
     static constexpr auto implied_behaviors = Operand::Behavior::Record;

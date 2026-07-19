@@ -6,7 +6,7 @@
 /**
  * @brief Defines every layout and field used by instructions in the ISA.
  * \cite ibm_powerpc_book1_2005
- * 
+ *
  * @todo Document the different instruction forms.
  */
 namespace Revo::InstructionLayout {
@@ -49,10 +49,10 @@ struct SCForm {
 
 struct DForm {
     /// \cond
-    struct RT : Instruction::Field<6,  10, u8,  Operand::Type::GPR>{ static constexpr auto role = Operand::Role::Write; };
+    struct RT : Instruction::Field<6,  10, u8,  Operand::Type::GPR>{};
     struct RS : Instruction::Field<6,  10, u8,  Operand::Type::GPR>{};
     struct TO : Instruction::Field<6,  10, u8,  Operand::Type::Immediate>{};
-    struct BF : Instruction::Field<6,  8,  u8,  Operand::Type::CR>{ static constexpr auto role = Operand::Role::Write; };
+    struct BF : Instruction::Field<6,  8,  u8,  Operand::Type::CR>{};
     struct L  : Instruction::Field<10, 10, u8,  Operand::Type::Immediate>{};
     struct RA : Instruction::Field<11, 15, u8,  Operand::Type::GPR>{};
     struct D  : Instruction::Field<16, 31, s16, Operand::Type::Immediate>{};
@@ -71,10 +71,10 @@ struct DForm {
 
 struct XForm {
     /// \cond
-    struct RT    : Instruction::Field<6,  10, u8, Operand::Type::GPR>{ static constexpr auto role = Operand::Role::Write; };
+    struct RT    : Instruction::Field<6,  10, u8, Operand::Type::GPR>{};
     struct RS    : Instruction::Field<6,  10, u8, Operand::Type::GPR>{};
     struct TO    : Instruction::Field<6,  10, u8, Operand::Type::Immediate>{};
-    struct BF    : Instruction::Field<6,  8,  u8, Operand::Type::CR>{ static constexpr auto role = Operand::Role::Write; };
+    struct BF    : Instruction::Field<6,  8,  u8, Operand::Type::CR>{};
     struct L10   : Instruction::Field<10, 10, u8, Operand::Type::Immediate>{};
     struct RA    : Instruction::Field<11, 15, u8, Operand::Type::GPR>{};
     struct SR    : Instruction::Field<12, 15, u8, Operand::Type::Immediate>{};
@@ -112,7 +112,7 @@ struct XLForm {
     /// \cond
     struct BO  : Instruction::Field<6,  10, u8, Operand::Type::Immediate>{};
     struct BT  : Instruction::Field<6,  10, u8, Operand::Type::Immediate>{};
-    struct BF  : Instruction::Field<6,  8,  u8, Operand::Type::CR>{ static constexpr auto role = Operand::Role::Write; };
+    struct BF  : Instruction::Field<6,  8,  u8, Operand::Type::CR>{};
     struct BI  : Instruction::Field<11, 15, u8, Operand::Type::Immediate>{};
     struct BA  : Instruction::Field<11, 15, u8, Operand::Type::Immediate>{};
     struct BFA : Instruction::Field<11, 13, u8, Operand::Type::CR>{};
@@ -130,9 +130,9 @@ struct XLForm {
 
 struct XFXForm {
     /// \cond
-    struct RT  : Instruction::Field<6,  10, u8,  Operand::Type::GPR>{ static constexpr auto role = Operand::Role::Write; };
+    struct RT  : Instruction::Field<6,  10, u8,  Operand::Type::GPR>{};
     struct RS  : Instruction::Field<6,  10, u8,  Operand::Type::GPR>{};
-    struct SPR : Instruction::Field<11, 20, u16, Operand::Type::SplitImmediate>{};
+    struct SPR : Instruction::Field<11, 20, u16, Operand::Type::SPR>{};
     struct TBR : Instruction::Field<11, 20, u16, Operand::Type::SplitImmediate>{};
     struct FXM : Instruction::Field<12, 19, u8,  Operand::Type::Immediate>{};
     struct XO  : Instruction::ExtendedOpcode<21, 30> {};
@@ -147,7 +147,7 @@ struct XFXForm {
 
 struct XOForm {
     /// \cond
-    struct RT : Instruction::Field<6,  10, u8, Operand::Type::GPR>{ static constexpr auto role = Operand::Role::Write; };
+    struct RT : Instruction::Field<6,  10, u8, Operand::Type::GPR>{};
     struct RA : Instruction::Field<11, 15, u8, Operand::Type::GPR>{};
     struct RB : Instruction::Field<16, 20, u8, Operand::Type::GPR>{};
     struct OE : Instruction::Field<21, 21, u8, Operand::Type::None, Operand::Behavior::Overflow>{};

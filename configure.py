@@ -35,6 +35,7 @@ n.newline()
 common_ccflags = [
     '-std=c++2c',
     '-freflection',
+    '-fno-exceptions',
     '-pedantic-errors',
     '-fno-asynchronous-unwind-tables',
     '-I', 'source',
