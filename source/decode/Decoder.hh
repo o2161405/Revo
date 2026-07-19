@@ -21,6 +21,21 @@ private:
     template <typename TField>
     static constexpr bool is_extended_opcode_v = requires { requires TField::is_extended_opcode; };
 
+    template <typename TField>
+    static constexpr Operand::Role default_role_v = [] {
+        if constexpr (requires { TField::role; }) {
+            return TField::role;
+        }
+        else if constexpr (TField::operand_type == Operand::Type::GPR ||
+            TField::operand_type == Operand::Type::FPR ||
+            TField::operand_type == Operand::Type::CR) {
+            return Operand::Role::Read;
+        }
+        else {
+            return Operand::Role::None;
+        }
+    }();
+
     // --- Decoding steps ---
     template <Mnemonic TMnemonic>
     [[nodiscard]] static constexpr DecodedInstruction

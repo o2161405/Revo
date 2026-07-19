@@ -21,6 +21,7 @@ public:
     struct ELFHeader {
         static constexpr auto IDENT_COUNT{16uz};
 
+        /// \cond
         std::array<u8, IDENT_COUNT> e_ident;
         u16 e_type;
         u16 e_machine;
@@ -35,15 +36,18 @@ public:
         u16 e_shentsize;
         u16 e_shnum;
         u16 e_shstrndx;
+        /// \endcond
     };
 
     struct Symbol {
+        /// \cond
         u32 st_name;
         u32 st_value;
         u32 st_size;
         u8 st_info;
         u8 st_other;
         u16 st_shndx;
+        /// \endcond
 
         [[nodiscard]] constexpr u8
         type() const {
@@ -62,6 +66,7 @@ public:
     };
 
     struct SectionHeader {
+        /// \cond
         u32 sh_name;
         u32 sh_type;
         u32 sh_flags;
@@ -72,6 +77,7 @@ public:
         u32 sh_info;
         u32 sh_addralign;
         u32 sh_entsize;
+        /// \endcond
 
         [[nodiscard]] constexpr bool
         contains(const Symbol& symbol) const {
@@ -89,9 +95,11 @@ public:
     };
 
     struct Rela {
+        /// \cond
         u32 r_offset;
         u32 r_info;
         s32 r_addend;
+        /// \endcond
 
         [[nodiscard]] constexpr u32
         symbol_index() const {

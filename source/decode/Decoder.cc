@@ -3,6 +3,7 @@
 #include "instruction/Layout.hh"
 #include "instruction/Specification.hh"
 
+#include <algorithm>
 #include <meta>
 
 namespace Revo {
@@ -43,14 +44,41 @@ Decoder::decode(Instruction instruction) {
     using Specification = InstructionSpecification<TMnemonic>;
     using Layout = Specification::Layout;
 
+    static constexpr auto fields = std::define_static_array(
+        std::meta::template_arguments_of(std::meta::dealias(^^Layout)));
+
+    if constexpr (requires { typename Specification::ZeroGPRField; }) {
+        static_assert(std::ranges::contains(
+                          fields, std::meta::dealias(^^typename Specification::ZeroGPRField)),
+            "ZeroGPRField isn't a field of the instruction's layout");
+    }
+
+    if constexpr (requires { typename Specification::DestinationField; }) {
+        static_assert(std::ranges::contains(
+                          fields, std::meta::dealias(^^typename Specification::DestinationField)),
+            "DestinationField isn't a field of the instruction's layout");
+    }
+
     DecodedInstruction decoded_instruction{.mnemonic = TMnemonic};
 
-    template for (constexpr auto field :
-        std::define_static_array(std::meta::template_arguments_of(std::meta::dealias(^^Layout)))) {
+    template for (constexpr auto field : fields) {
         using TField = [:field:];
         if constexpr (TField::operand_type != Operand::Type::None) {
-            decoded_instruction.operands.push_back(
-                Operand::get<TField::operand_type>(instruction.get<TField>()));
+            const auto value = instruction.get<TField>();
+
+            constexpr auto role = IsDestinationField<Specification, TField> ?
+                Operand::Role::Write :
+                default_role_v<TField>;
+
+            if constexpr (IsZeroableField<Specification, TField>) {
+                decoded_instruction.operands.push_back(value == 0 ?
+                        Operand::get<Operand::Type::Immediate>(0) :
+                        Operand::get<TField::operand_type>(value, role));
+            }
+            else {
+                decoded_instruction.operands.push_back(
+                    Operand::get<TField::operand_type>(value, role));
+            }
         }
         else if constexpr (TField::operand_behaviour != Operand::Behavior::None) {
             if constexpr (HasImpliedBehaviors<Specification>) {

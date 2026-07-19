@@ -27,6 +27,12 @@ struct Operand {
         SplitImmediate,
     };
 
+    enum class Role : u8 {
+        None,
+        Read,
+        Write,
+    };
+
     /* clang-format off */
     enum class Behavior : u8 {
         None     = 0,
@@ -48,29 +54,30 @@ struct Operand {
 
     template <Type TType>
     [[nodiscard]] static constexpr Operand
-    get(auto value) {
+    get(auto value, Role role = Role::None) {
         if constexpr (TType == Type::GPR) {
-            return Operand{.value = Register::GPR{value}};
+            return Operand{.value = Register::GPR{value}, .role = role};
         }
         else if constexpr (TType == Type::FPR) {
-            return Operand{.value = Register::FPR{value}};
+            return Operand{.value = Register::FPR{value}, .role = role};
         }
         else if constexpr (TType == Type::CR) {
-            return Operand{.value = Register::CR{value}};
+            return Operand{.value = Register::CR{value}, .role = role};
         }
         else if constexpr (TType == Type::Immediate) {
-            return Operand{.value = Immediate{value}};
+            return Operand{.value = Immediate{value}, .role = role};
         }
         else if constexpr (TType == Type::BranchDestination) {
-            return Operand{.value = BranchDestination{static_cast<u32>(value) << 2}};
+            return Operand{.value = BranchDestination{static_cast<u32>(value) << 2}, .role = role};
         }
         else if constexpr (TType == Type::SplitImmediate) {
             constexpr auto SHIFT{5uz};
             constexpr u32 HALF_MASK = (1 << SHIFT) - 1;
 
             const auto raw = static_cast<u32>(value);
-            return Operand{.value = Immediate{
-                               static_cast<s32>(((raw & HALF_MASK) << SHIFT) | (raw >> SHIFT))}};
+            return Operand{
+                .value = Immediate{static_cast<s32>(((raw & HALF_MASK) << SHIFT) | (raw >> SHIFT))},
+                .role = role};
         }
         else {
             static_assert(false, "Type has no operand equivalent");
@@ -78,6 +85,7 @@ struct Operand {
     }
 
     Variant value;
+    Role role{Role::None};
 };
 
 [[nodiscard]] constexpr Operand::Behavior

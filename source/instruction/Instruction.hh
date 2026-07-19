@@ -71,6 +71,12 @@ struct DecodedInstruction {
     Mnemonic mnemonic;
     std::inplace_vector<Operand, MAX_OPERANDS> operands{};
     Operand::Behavior behaviors{};
+
+    [[nodiscard]] constexpr auto
+    by_role(Operand::Role role) const {
+        return operands |
+            std::views::filter([role](const Operand& operand) { return operand.role == role; });
+    }
 };
 
 } // namespace Revo

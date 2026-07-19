@@ -3,20 +3,31 @@
 #include "instruction/Instruction.hh"
 #include "instruction/Operand.hh"
 
+/**
+ * @brief Defines every layout and field used by instructions in the ISA.
+ * \cite ibm_powerpc_book1_2005
+ * 
+ * @todo Document the different instruction forms.
+ */
 namespace Revo::InstructionLayout {
 
 /* clang-format off */
+/// \cond
 struct OPCD : Instruction::Field<0, 5, u8>{};
+/// \endcond
 
 struct IForm {
+    /// \cond
     struct LI : Instruction::Field<6,  29, s32, Operand::Type::BranchDestination>{};
     struct AA : Instruction::Field<30, 30, u8,  Operand::Type::None, Operand::Behavior::Absolute>{};
     struct LK : Instruction::Field<31, 31, u8,  Operand::Type::None, Operand::Behavior::Link>{};
 
     using Impl = Instruction::Layout<OPCD, LI, AA, LK>;
+    /// \endcond
 };
 
 struct BForm {
+    /// \cond
     struct BO : Instruction::Field<6,  10, u8,  Operand::Type::Immediate>{};
     struct BI : Instruction::Field<11, 15, u8,  Operand::Type::Immediate>{};
     struct BD : Instruction::Field<16, 29, s16, Operand::Type::BranchDestination>{};
@@ -24,20 +35,24 @@ struct BForm {
     struct LK : Instruction::Field<31, 31, u8,  Operand::Type::None, Operand::Behavior::Link>{};
 
     using Impl = Instruction::Layout<OPCD, BO, BI, BD, AA, LK>;
+    /// \endcond
 };
 
 struct SCForm {
+    /// \cond
     struct LEV   : Instruction::Field<20, 26, u8, Operand::Type::Immediate>{};
     struct BIT30 : Instruction::Field<30, 30, u8>{};
 
     using Impl = Instruction::Layout<OPCD, LEV, BIT30>;
+    /// \endcond
 };
 
 struct DForm {
-    struct RT : Instruction::Field<6,  10, u8,  Operand::Type::GPR>{};
+    /// \cond
+    struct RT : Instruction::Field<6,  10, u8,  Operand::Type::GPR>{ static constexpr auto role = Operand::Role::Write; };
     struct RS : Instruction::Field<6,  10, u8,  Operand::Type::GPR>{};
     struct TO : Instruction::Field<6,  10, u8,  Operand::Type::Immediate>{};
-    struct BF : Instruction::Field<6,  8,  u8,  Operand::Type::CR>{};
+    struct BF : Instruction::Field<6,  8,  u8,  Operand::Type::CR>{ static constexpr auto role = Operand::Role::Write; };
     struct L  : Instruction::Field<10, 10, u8,  Operand::Type::Immediate>{};
     struct RA : Instruction::Field<11, 15, u8,  Operand::Type::GPR>{};
     struct D  : Instruction::Field<16, 31, s16, Operand::Type::Immediate>{};
@@ -51,13 +66,15 @@ struct DForm {
     using Impl_BF_L_RA_SI = Instruction::Layout<OPCD, BF, L, RA, SI>;
     using Impl_BF_L_RA_UI = Instruction::Layout<OPCD, BF, L, RA, UI>;
     using Impl_TO_RA_SI   = Instruction::Layout<OPCD, TO, RA, SI>;
+    /// \endcond
 };
 
 struct XForm {
-    struct RT    : Instruction::Field<6,  10, u8, Operand::Type::GPR>{};
+    /// \cond
+    struct RT    : Instruction::Field<6,  10, u8, Operand::Type::GPR>{ static constexpr auto role = Operand::Role::Write; };
     struct RS    : Instruction::Field<6,  10, u8, Operand::Type::GPR>{};
     struct TO    : Instruction::Field<6,  10, u8, Operand::Type::Immediate>{};
-    struct BF    : Instruction::Field<6,  8,  u8, Operand::Type::CR>{};
+    struct BF    : Instruction::Field<6,  8,  u8, Operand::Type::CR>{ static constexpr auto role = Operand::Role::Write; };
     struct L10   : Instruction::Field<10, 10, u8, Operand::Type::Immediate>{};
     struct RA    : Instruction::Field<11, 15, u8, Operand::Type::GPR>{};
     struct SR    : Instruction::Field<12, 15, u8, Operand::Type::Immediate>{};
@@ -88,12 +105,14 @@ struct XForm {
     using Impl_RA_RB_XO          = Instruction::Layout<OPCD, RA, RB, XO>;
     using Impl_RB_XO             = Instruction::Layout<OPCD, RB, XO>;
     using Impl_XO                = Instruction::Layout<OPCD, XO>;
+    /// \endcond
 };
 
 struct XLForm {
+    /// \cond
     struct BO  : Instruction::Field<6,  10, u8, Operand::Type::Immediate>{};
     struct BT  : Instruction::Field<6,  10, u8, Operand::Type::Immediate>{};
-    struct BF  : Instruction::Field<6,  8,  u8, Operand::Type::CR>{};
+    struct BF  : Instruction::Field<6,  8,  u8, Operand::Type::CR>{ static constexpr auto role = Operand::Role::Write; };
     struct BI  : Instruction::Field<11, 15, u8, Operand::Type::Immediate>{};
     struct BA  : Instruction::Field<11, 15, u8, Operand::Type::Immediate>{};
     struct BFA : Instruction::Field<11, 13, u8, Operand::Type::CR>{};
@@ -106,10 +125,12 @@ struct XLForm {
     using Impl_BO_BI_BH_XO_LK = Instruction::Layout<OPCD, BO, BI, BH, XO, LK>;
     using Impl_BF_BFA_XO      = Instruction::Layout<OPCD, BF, BFA, XO>;
     using Impl_XO             = Instruction::Layout<OPCD, XO>;
+    /// \endcond
 };
 
 struct XFXForm {
-    struct RT  : Instruction::Field<6,  10, u8,  Operand::Type::GPR>{};
+    /// \cond
+    struct RT  : Instruction::Field<6,  10, u8,  Operand::Type::GPR>{ static constexpr auto role = Operand::Role::Write; };
     struct RS  : Instruction::Field<6,  10, u8,  Operand::Type::GPR>{};
     struct SPR : Instruction::Field<11, 20, u16, Operand::Type::SplitImmediate>{};
     struct TBR : Instruction::Field<11, 20, u16, Operand::Type::SplitImmediate>{};
@@ -121,10 +142,12 @@ struct XFXForm {
     using Impl_RT_XO     = Instruction::Layout<OPCD, RT, XO>;
     using Impl_RS_FXM_XO = Instruction::Layout<OPCD, RS, FXM, XO>;
     using Impl_RS_SPR_XO = Instruction::Layout<OPCD, RS, SPR, XO>;
+    /// \endcond
 };
 
 struct XOForm {
-    struct RT : Instruction::Field<6,  10, u8, Operand::Type::GPR>{};
+    /// \cond
+    struct RT : Instruction::Field<6,  10, u8, Operand::Type::GPR>{ static constexpr auto role = Operand::Role::Write; };
     struct RA : Instruction::Field<11, 15, u8, Operand::Type::GPR>{};
     struct RB : Instruction::Field<16, 20, u8, Operand::Type::GPR>{};
     struct OE : Instruction::Field<21, 21, u8, Operand::Type::None, Operand::Behavior::Overflow>{};
@@ -134,9 +157,11 @@ struct XOForm {
     using Impl_RT_RA_RB_OE_XO_Rc = Instruction::Layout<OPCD, RT, RA, RB, OE, XO, Rc>;
     using Impl_RT_RA_RB_XO_Rc    = Instruction::Layout<OPCD, RT, RA, RB, XO, Rc>;
     using Impl_RT_RA_OE_XO_Rc    = Instruction::Layout<OPCD, RT, RA, OE, XO, Rc>;
+    /// \endcond
 };
 
 struct MForm {
+    /// \cond
     struct RS : Instruction::Field<6,  10, u8, Operand::Type::GPR>{};
     struct RA : Instruction::Field<11, 15, u8, Operand::Type::GPR>{};
     struct RB : Instruction::Field<16, 20, u8, Operand::Type::GPR>{};
@@ -147,6 +172,7 @@ struct MForm {
 
     using Impl_RS_RA_RB_MB_ME_Rc = Instruction::Layout<OPCD, RS, RA, RB, MB, ME, Rc>;
     using Impl_RS_RA_SH_MB_ME_Rc = Instruction::Layout<OPCD, RS, RA, SH, MB, ME, Rc>;
+    /// \endcond
 };
 /* clang-format on */
 

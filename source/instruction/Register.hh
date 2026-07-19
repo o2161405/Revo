@@ -1,8 +1,15 @@
 #pragma once
 
+/**
+ * @brief Defines different register types in the ISA.
+ */
 namespace Revo::Register {
 
 /* clang-format off */
+
+/**
+ * @brief General purpose registers r0-r31
+ */
 enum class GPR : u8 {
     r0 = 0, r1, r2, r3, r4, r5, r6, r7,
     r8, r9, r10, r11, r12, r13, r14, r15,
@@ -10,6 +17,9 @@ enum class GPR : u8 {
     r24, r25, r26, r27, r28, r29, r30, r31
 };
 
+/**
+ * Floating point registers f0-f31
+ */
 enum class FPR : u8 {
     f0 = 0, f1, f2, f3, f4, f5, f6, f7,
     f8, f9, f10, f11, f12, f13, f14, f15,
@@ -17,6 +27,9 @@ enum class FPR : u8 {
     f24, f25, f26, f27, f28, f29, f30, f31
 };
 
+/**
+ * @brief Condition register fields cr0-cr7
+ */
 enum class CR : u8 {
     cr0 = 0, cr1, cr2, cr3, cr4, cr5, cr6, cr7
 };
