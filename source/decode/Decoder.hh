@@ -1,6 +1,6 @@
 #pragma once
 
-#include "elf/Function.hh"
+#include "decode/DecoderResult.hh"
 #include "elf/Parser.hh"
 #include "instruction/Instruction.hh"
 #include "instruction/Mnemonic.hh"
@@ -14,14 +14,10 @@ namespace Revo {
 
 class Decoder {
 public:
-    using Function = ELF::FunctionImpl<DecodedInstruction>;
-
-    [[nodiscard]] static std::expected<Decoder, std::string>
-    decode(const std::vector<ELF::Parser::Function>& functions);
+    [[nodiscard]] static std::expected<DecoderResult, std::string>
+    decode(const std::vector<FunctionImpl<u32>>& functions);
 
 private:
-    Decoder() = default;
-
     // --- Decoding steps ---
     [[nodiscard]] static std::expected<DecodedInstruction, std::string>
     decode_instruction(Instruction instruction, u32 address);
@@ -37,19 +33,16 @@ private:
             type == Operand::Type::SPR || type == Operand::Type::CR;
     }
 
-    template <typename... TFields, u32... TValues>
+    template <typename... TFields, u32... TAccesses>
     [[nodiscard]] static constexpr bool
     valid_field_constants(
-        Instruction instruction, FieldConstants<FieldConstant<TFields, TValues>...>) {
-        return ((instruction.get<TFields>() == TValues) && ...);
+        Instruction instruction, FieldConstants<FieldConstant<TFields, TAccesses>...>) {
+        return ((instruction.get<TFields>() == TAccesses) && ...);
     }
 
     template <typename TSpecification, typename TField>
     [[nodiscard]] static consteval Operand::Access
     get_access_type();
-
-    // --- Member variables ---
-    std::vector<Function> mFunctions;
 };
 
 } // namespace Revo

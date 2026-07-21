@@ -1,7 +1,9 @@
 #include <print>
 
 #include "decode/Decoder.hh"
+#include "decode/DecoderResult.hh"
 #include "elf/Parser.hh"
+#include "elf/ParserResult.hh"
 
 using namespace Revo;
 
@@ -13,16 +15,16 @@ main() {
     Console::set(Console::LogLevel::Info);
 #endif
 
-    auto elf = ELF::Parser::parse("example.elf");
-    if (!elf) {
-        Console::error("Failed to parse ELF file: {}", elf.error());
+    auto parse_result = ELF::Parser::parse("example.elf");
+    if (!parse_result) {
+        Console::error("Failed to parse ELF file: {}", parse_result.error());
         return 1;
     }
     Console::success("Successfully parsed ELF file");
 
-    auto decoder = Decoder::decode(elf->functions());
-    if (!decoder) {
-        Console::error("Failed to decode: {}", decoder.error());
+    auto decode_result = Decoder::decode(parse_result->revoFunctions);
+    if (!decode_result) {
+        Console::error("Failed to decode: {}", decode_result.error());
         return 1;
     }
     Console::success("Successfully decoded functions");

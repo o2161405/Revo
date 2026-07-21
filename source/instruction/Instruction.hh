@@ -54,13 +54,15 @@ public:
             return (raw & ~mask) != 0;
         }
 
-        /* clang-format off */
         [[nodiscard]] static constexpr u16
-        extended_opcode(u32 raw) {
-            return (0u | ... | (TFields::is_extended_opcode ?
-                        static_cast<u16>((raw >> TFields::shift) & TFields::mask) : 0u));
+        extended_opcode(u32 raw)
+            requires has_extended_opcode
+        {
+            return (0u | ... |
+                (TFields::is_extended_opcode ?
+                        static_cast<u16>((raw >> TFields::shift) & TFields::mask) :
+                        0u));
         }
-        /* clang-format on */
     };
 
     constexpr explicit Instruction(u32 raw) : mRaw(raw) {}
