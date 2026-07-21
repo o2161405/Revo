@@ -7,41 +7,40 @@
 
 namespace Revo {
 
-std::expected<Decoder, std::string>
-Decoder::decode(const std::vector<ELF::Parser::Function>& functions) {
-    Decoder decoder;
+std::expected<DecoderResult, std::string>
+Decoder::decode(const std::vector<FunctionImpl<u32>>& functions) {
+    DecoderResult result;
 
     for (const auto& function : functions) {
-        Function decoded_function{//
-            .instructions = {},
-            .relocations = function.relocations,
-            .offset = function.offset,
-            .size = function.size};
-
-        decoded_function.instructions.reserve(function.instructions.size());
+        std::vector<DecodedInstruction> instructions;
+        instructions.reserve(function.instructions.size());
 
         for (auto [index, raw] : std::views::enumerate(function.instructions)) {
             const auto address = static_cast<u32>(function.offset + index * sizeof(u32));
 
-            auto result = decode_instruction(Instruction{static_cast<u32>(raw)}, address);
-            if (!result) {
-                return std::unexpected(std::format("{} at {:#x}", result.error(), address));
+            auto decoded = decode_instruction(Instruction{raw}, address);
+            if (!decoded) {
+                return std::unexpected(decoded.error());
             }
 
-            decoded_function.instructions.push_back(*result);
+            instructions.push_back(*decoded);
         }
 
-        decoder.mFunctions.push_back(std::move(decoded_function));
+        result.functions.push_back({//
+            .instructions = std::move(instructions),
+            .relocations = function.relocations,
+            .offset = function.offset,
+            .size = function.size});
     }
 
-    Console::info("Decoded {} functions", decoder.mFunctions.size());
-    return decoder;
+    Console::info("Decoded {} functions", result.functions.size());
+    return result;
 }
 
 std::expected<DecodedInstruction, std::string>
 Decoder::decode_instruction(Instruction instruction, u32 address) {
     const auto opcd = instruction.get<InstructionLayout::OPCD>();
-    std::optional<u32> extended_opcode;
+    std::optional<u32> xo;
 
     template for (constexpr auto enumerator :
         std::define_static_array(std::meta::enumerators_of(^^Mnemonic))) {
@@ -64,26 +63,26 @@ Decoder::decode_instruction(Instruction instruction, u32 address) {
                 "Layout has an extended opcode but the instruction specification doesn't "
                 "provide the required fields");
 
-            extended_opcode = Layout::extended_opcode(instruction.raw());
-
-            if (*extended_opcode != Specification::xo) {
+            xo = Layout::extended_opcode(instruction.raw());
+            if (xo != Specification::xo) {
                 continue;
             }
         }
 
-        if (Specification::Layout::uses_reserved_bits(instruction.raw())) {
-            return std::unexpected(std::format("reserved bits set ({:#010x})", instruction.raw()));
+        if (Layout::uses_reserved_bits(instruction.raw())) {
+            return std::unexpected(
+                std::format("reserved bits set ({:#010x}) at {:#x}", instruction.raw(), address));
         }
 
         return decode<mnemonic>(instruction, address);
     }
 
-    if (extended_opcode) {
+    if (xo) {
         return std::unexpected(
-            std::format("unimplemented opcode ({}, xo {})", opcd, *extended_opcode));
+            std::format("unimplemented opcode ({}, xo {}) at {:#x}", opcd, *xo, address));
     }
 
-    return std::unexpected(std::format("unimplemented opcode ({})", opcd));
+    return std::unexpected(std::format("unimplemented opcode ({}) at {:#x}", opcd, address));
 }
 
 template <Mnemonic TMnemonic>
