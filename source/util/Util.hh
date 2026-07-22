@@ -9,22 +9,6 @@
 
 namespace Revo::Util {
 
-template<typename T>
-struct VectorTraits {
-	static constexpr bool IsVector = false;
-};
-
-template<typename T, typename TAllocator>
-struct VectorTraits<std::vector<T, TAllocator>> {
-	static constexpr bool IsVector = true;
-
-	using ItemType = T;
-	using AllocatorType = TAllocator;
-};
-
-template<typename T>
-inline constexpr bool IsVector = VectorTraits<std::remove_cvref_t<T>>::IsVector;
-
 template <typename TObject>
 constexpr void
 byteswap(TObject& object) noexcept {
