@@ -1,6 +1,7 @@
 #include <print>
 
 #include "decode/Decoder.hh"
+#include "decode/DecoderResult.hh"
 #include "elf/Parser.hh"
 #include "util/cli/Help.hh"
 #include "util/cli/Options.hh"
@@ -34,16 +35,16 @@ main(int argc, char* argv[]) {
 		return 0;
 	}
 
-    auto elf = ELF::Parser::parse(options.template get<"input">());
-    if (!elf) {
-        Console::error("Failed to parse ELF file: {}", elf.error());
+    auto parse_result = ELF::Parser::parse(options.template get<"input">());
+    if (!parse_result) {
+        Console::error("Failed to parse ELF file: {}", parse_result.error());
         return 1;
     }
     Console::success("Successfully parsed ELF file");
 
-    auto decoder = Decoder::decode(elf->functions());
-    if (!decoder) {
-        Console::error("Failed to decode: {}", decoder.error());
+    auto decode_result = Decoder::decode(parse_result->revoFunctions);
+    if (!decode_result) {
+        Console::error("Failed to decode: {}", decode_result.error());
         return 1;
     }
     Console::success("Successfully decoded functions");

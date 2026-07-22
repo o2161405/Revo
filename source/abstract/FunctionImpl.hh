@@ -5,7 +5,7 @@
 #include <flat_map>
 #include <vector>
 
-namespace Revo::ELF {
+namespace Revo {
 
 template <typename TInstruction>
 struct FunctionImpl {
@@ -15,4 +15,4 @@ struct FunctionImpl {
     u32 size;
 };
 
-} // namespace Revo::ELF
+} // namespace Revo

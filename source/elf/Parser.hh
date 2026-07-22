@@ -1,6 +1,7 @@
 #pragma once
 
-#include "elf/Function.hh"
+#include "abstract/FunctionImpl.hh"
+#include "elf/ParserResult.hh"
 #include "elf/Types.hh"
 
 #include <array>
@@ -16,57 +17,38 @@ namespace Revo::ELF {
 
 class Parser {
 public:
-    using Function = FunctionImpl<u32 /*raw instruction words*/>;
-
-    [[nodiscard]] const std::vector<Function>&
-    functions() const {
-        return mRevoFunctions;
-    }
-
-    [[nodiscard]] static std::expected<Parser, std::string>
+    [[nodiscard]] static std::expected<ParserResult, std::string>
     parse(const std::filesystem::path& path);
 
-    [[nodiscard]] static std::expected<Parser, std::string>
+    [[nodiscard]] static std::expected<ParserResult, std::string>
     parse(std::ifstream& stream);
 
 private:
     Parser() = default;
 
     // --- Parsing steps ---
-    [[nodiscard]] std::expected<void, std::string>
-    parse_elf_header(std::ifstream& stream);
+    [[nodiscard]] static std::expected<void, std::string>
+    parse_elf_header(ParserResult& result, std::ifstream& stream);
 
-    [[nodiscard]] std::expected<void, std::string>
-    parse_section_headers(std::ifstream& stream);
+    [[nodiscard]] static std::expected<void, std::string>
+    parse_section_headers(ParserResult& result, std::ifstream& stream);
 
-    [[nodiscard]] std::expected<void, std::string>
-    parse_string_table(std::ifstream& stream);
+    [[nodiscard]] static std::expected<void, std::string>
+    parse_string_table(ParserResult& result, std::ifstream& stream);
 
-    [[nodiscard]] std::expected<void, std::string>
-    parse_symbol_table(std::ifstream& stream);
+    [[nodiscard]] static std::expected<void, std::string>
+    parse_symbol_table(ParserResult& result, std::ifstream& stream);
 
-    [[nodiscard]] std::expected<void, std::string>
-    parse_revo_relocations(std::ifstream& stream);
+    [[nodiscard]] static std::expected<void, std::string>
+    parse_revo_relocations(ParserResult& result, std::ifstream& stream);
 
-    [[nodiscard]] std::expected<void, std::string>
-    parse_revo_functions(std::ifstream& stream);
+    [[nodiscard]] static std::expected<void, std::string>
+    parse_revo_functions(ParserResult& result, std::ifstream& stream);
 
     // --- Utility functions ---
     using SectionIndex = u32;
-    [[nodiscard]] std::expected<std::pair<SectionIndex, ELF::SectionHeader>, std::string>
-    get_section(std::string_view section) const;
-
-    // --- Member variables ---
-    ELF::ELFHeader mELFHeader{};
-
-    std::vector<ELF::SectionHeader> mSectionHeaders;
-    std::vector<char> mSectionStringTable;
-
-    std::vector<ELF::Symbol> mSymbols;
-    std::vector<char> mSymbolStringTable;
-
-    std::vector<ELF::Rela> mRevoRelocations;
-    std::vector<Function> mRevoFunctions;
+    [[nodiscard]] static std::expected<std::pair<SectionIndex, ELF::SectionHeader>, std::string>
+    get_section(const ParserResult& result, std::string_view section);
 };
 
 } // namespace Revo::ELF
