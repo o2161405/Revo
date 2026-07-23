@@ -43,16 +43,16 @@ parse_value(std::string_view value) {
     return std::unexpected(std::format("Invalid log level \"{}\"", value));
 }
 
-/* clang-format off */
 template <typename TEnum>
 [[nodiscard]] consteval std::string_view
 enum_string() {
+    /* clang-format off */
     return std::define_static_string(std::meta::enumerators_of(^^TEnum) //
         | std::views::transform([](std::meta::info enumerator) { return std::meta::identifier_of(enumerator); }) //
         | std::views::join_with("|"sv) //
         | std::ranges::to<std::string>());
+    /* clang-format on */
 }
-/* clang-format on */
 
 } // namespace
 
