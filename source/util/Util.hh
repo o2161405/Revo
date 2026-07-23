@@ -4,6 +4,8 @@
 #include <concepts>
 #include <meta>
 #include <ranges>
+#include <type_traits>
+#include <vector>
 
 namespace Revo::Util {
 

@@ -68,6 +68,14 @@ public:
         }
     }
 
+    template <typename... TArguments>
+    static void
+    none(std::format_string<TArguments...> string, TArguments&&... args) {
+        if (mLogLevel.load(std::memory_order_relaxed) >= LogLevel::Info) {
+            std::println(stdout, "{}", std::format(string, std::forward<TArguments>(args)...));
+        }
+    }
+
 private:
     static constexpr std::string_view ERROR_COLOR = "\033[38;2;255;255;255m\033[48;2;112;0;0m";
     static constexpr std::string_view WARNING_COLOR = "\033[38;2;255;255;255m\033[48;2;184;149;11m";

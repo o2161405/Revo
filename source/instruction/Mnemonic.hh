@@ -2,6 +2,8 @@
 
 namespace Revo {
 
+/* clang-format off */
+
 /**
  * @brief Instruction mnemonics
  *
@@ -34,5 +36,7 @@ enum class Mnemonic {
     MTSPR,    ///< `mtspr`
     ADDIC_RC, ///< `addic.`, seperate opcode from `addic`
 };
+
+/* clang-format on */
 
 } // namespace Revo
