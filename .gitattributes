@@ -1,2 +1,3 @@
 *.ld linguist-generated
 Makefile linguist-generated
+.clang-format linguist-generated
