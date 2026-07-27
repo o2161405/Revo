@@ -23,10 +23,15 @@ public:
         mLogLevel.store(level, std::memory_order_relaxed);
     }
 
+    static inline LogLevel
+    get() {
+        return mLogLevel.load(std::memory_order_relaxed);
+    }
+
     template <typename... TArguments>
     static void
     error(std::format_string<TArguments...> string, TArguments&&... args) {
-        if (mLogLevel.load(std::memory_order_relaxed) >= LogLevel::Error) {
+        if (get() >= LogLevel::Error) {
             std::println(stderr, "{}[ERROR]{}   {}", ERROR_COLOR, RESET_COLOR,
                 std::format(string, std::forward<TArguments>(args)...));
         }
@@ -35,7 +40,7 @@ public:
     template <typename... TArguments>
     static void
     warning(std::format_string<TArguments...> string, TArguments&&... args) {
-        if (mLogLevel.load(std::memory_order_relaxed) >= LogLevel::Warning) {
+        if (get() >= LogLevel::Warning) {
             std::println(stderr, "{}[WARNING]{} {}", WARNING_COLOR, RESET_COLOR,
                 std::format(string, std::forward<TArguments>(args)...));
         }
@@ -44,7 +49,7 @@ public:
     template <typename... TArguments>
     static void
     info(std::format_string<TArguments...> string, TArguments&&... args) {
-        if (mLogLevel.load(std::memory_order_relaxed) >= LogLevel::Info) {
+        if (get() >= LogLevel::Info) {
             std::println(stdout, "{}[INFO]{}    {}", INFO_COLOR, RESET_COLOR,
                 std::format(string, std::forward<TArguments>(args)...));
         }
@@ -53,7 +58,7 @@ public:
     template <typename... TArguments>
     static void
     debug(std::format_string<TArguments...> string, TArguments&&... args) {
-        if (mLogLevel.load(std::memory_order_relaxed) >= LogLevel::Debug) {
+        if (get() >= LogLevel::Debug) {
             std::println(stdout, "{}[DEBUG]{}   {}", DEBUG_COLOR, RESET_COLOR,
                 std::format(string, std::forward<TArguments>(args)...));
         }
@@ -62,7 +67,7 @@ public:
     template <typename... TArguments>
     static void
     success(std::format_string<TArguments...> string, TArguments&&... args) {
-        if (mLogLevel.load(std::memory_order_relaxed) >= LogLevel::Info) {
+        if (get() >= LogLevel::Info) {
             std::println(stdout, "{}[SUCCESS]{} {}", SUCCESS_COLOR, RESET_COLOR,
                 std::format(string, std::forward<TArguments>(args)...));
         }
@@ -71,7 +76,7 @@ public:
     template <typename... TArguments>
     static void
     none(std::format_string<TArguments...> string, TArguments&&... args) {
-        if (mLogLevel.load(std::memory_order_relaxed) >= LogLevel::Info) {
+        if (get() >= LogLevel::Info) {
             std::println(stdout, "{}", std::format(string, std::forward<TArguments>(args)...));
         }
     }

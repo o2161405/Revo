@@ -2,9 +2,9 @@
 
 #include <variant>
 
-#include "instruction/Register.hh"
+#include "ppc/Register.hh"
 
-namespace Revo {
+namespace Revo::PPC {
 
 struct Operand {
     // todo: can the types in these structs be derived from Instruction::INSTRUCTION_WIDTH
@@ -121,4 +121,4 @@ struct Operand {
     Access access{Access::None};
 };
 
-} // namespace Revo
+} // namespace Revo::PPC

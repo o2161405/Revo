@@ -1,7 +1,7 @@
 #pragma once
 
-#include "instruction/Instruction.hh"
-#include "instruction/Operand.hh"
+#include "ppc/Instruction.hh"
+#include "ppc/Operand.hh"
 
 /**
  * @brief Defines every layout and field used by instructions in the ISA.
@@ -9,7 +9,7 @@
  *
  * @todo Document the different instruction forms.
  */
-namespace Revo::InstructionLayout {
+namespace Revo::PPC::Layout {
 
 /* clang-format off */
 /// \cond
@@ -176,4 +176,4 @@ struct MForm {
 };
 /* clang-format on */
 
-} // namespace Revo::InstructionLayout
+} // namespace Revo::PPC::Layout

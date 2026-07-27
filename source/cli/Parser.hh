@@ -1,19 +1,43 @@
 #pragma once
 
 #include "cli/Argument.hh"
-#include "cli/ParserResult.hh"
 #include "cli/Specification.hh"
 
 #include <expected>
+#include <filesystem>
+#include <flat_map>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
+#include <variant>
 
 namespace Revo::CLI {
 
 class Parser {
 public:
-    [[nodiscard]] static std::expected<ParserResult, std::string>
+    struct Result {
+        std::flat_map<Argument::Type, Argument::Variant> arguments;
+
+        [[nodiscard]] bool
+        contains(Argument::Type type) const {
+            return arguments.contains(type);
+        }
+
+        template <Argument::Type TType>
+            requires HasType<ArgumentSpecification<TType>>
+        [[nodiscard]] std::optional<typename ArgumentSpecification<TType>::Type>
+        get() const {
+            const auto it = arguments.find(TType);
+            if (it == arguments.end()) {
+                return std::nullopt;
+            }
+
+            return std::get<typename ArgumentSpecification<TType>::Type>(it->second);
+        }
+    };
+
+    [[nodiscard]] static std::expected<Parser::Result, std::string>
     parse(int argc, const char* const* argv);
 
     static void
@@ -24,10 +48,10 @@ private:
 
     // --- Parsing steps ---
     [[nodiscard]] static std::expected<void, std::string>
-    parse_arguments(ParserResult& result, std::span<const char* const> arguments);
+    parse_arguments(Parser::Result& result, std::span<const char* const> arguments);
 
     [[nodiscard]] static std::expected<void, std::string>
-    check_required(const ParserResult& result);
+    check_required(const Parser::Result& result);
 
     // --- Utility functions ---
     template <typename TType>

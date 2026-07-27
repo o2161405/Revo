@@ -5,10 +5,10 @@
 #include <ranges>
 #include <type_traits>
 
-#include "instruction/Mnemonic.hh"
-#include "instruction/Operand.hh"
+#include "ppc/Mnemonic.hh"
+#include "ppc/Operand.hh"
 
-namespace Revo {
+namespace Revo::PPC {
 
 class Instruction {
 public:
@@ -91,12 +91,4 @@ private:
     u32 mRaw;
 };
 
-struct DecodedInstruction {
-    static constexpr auto MAX_OPERANDS{5uz};
-
-    Mnemonic mnemonic;
-    std::inplace_vector<Operand, MAX_OPERANDS> operands{};
-    Operand::Behavior behaviors{};
-};
-
-} // namespace Revo
+} // namespace Revo::PPC

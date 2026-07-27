@@ -52,9 +52,9 @@ Parser::parse_value(std::string_view value) {
     return std::unexpected(std::format("Invalid log level \"{}\"", value));
 }
 
-std::expected<ParserResult, std::string>
+std::expected<Parser::Result, std::string>
 Parser::parse(int argc, const char* const* argv) {
-    ParserResult result;
+    Parser::Result result;
 
     const auto argument_count = argc > 1 ? static_cast<std::size_t>(argc - 1) : 0uz;
     const std::span<const char* const> arguments{argv + 1, argument_count};
@@ -65,7 +65,7 @@ Parser::parse(int argc, const char* const* argv) {
 }
 
 std::expected<void, std::string>
-Parser::parse_arguments(ParserResult& result, std::span<const char* const> arguments) {
+Parser::parse_arguments(Parser::Result& result, std::span<const char* const> arguments) {
     for (auto i{0uz}; i < arguments.size(); ++i) {
         const std::string_view flag{arguments[i]};
         bool valid{false};
@@ -87,8 +87,7 @@ Parser::parse_arguments(ParserResult& result, std::span<const char* const> argum
 
             if constexpr (HasType<Specification>) {
                 if (i + 1 >= arguments.size()) {
-                    return std::unexpected(
-                        std::format("Argument {} requires a value", flag));
+                    return std::unexpected(std::format("Argument {} requires a value", flag));
                 }
 
                 auto value = parse_value<typename Specification::Type>(arguments[++i]);
@@ -112,7 +111,7 @@ Parser::parse_arguments(ParserResult& result, std::span<const char* const> argum
 }
 
 std::expected<void, std::string>
-Parser::check_required(const ParserResult& result) {
+Parser::check_required(const Parser::Result& result) {
     if (result.contains(Argument::Type::Help)) {
         return {};
     }

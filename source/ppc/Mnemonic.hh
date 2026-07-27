@@ -1,6 +1,6 @@
 #pragma once
 
-namespace Revo {
+namespace Revo::PPC {
 
 /* clang-format off */
 
@@ -39,4 +39,4 @@ enum class Mnemonic {
 
 /* clang-format on */
 
-} // namespace Revo
+} // namespace Revo::PPC

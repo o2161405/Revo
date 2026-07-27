@@ -29,7 +29,7 @@ CFLAGS	= -g -O2 -Wall -ffunction-sections -fno-jump-tables -fno-optimize-sibling
 CXXFLAGS	=	$(CFLAGS) -std=gnu++20 -fno-exceptions -fno-rtti -fno-devirtualize
 ASFLAGS	=	$(MACHDEP) -Wa,-mregnames
 
-LDFLAGS	=	-g $(MACHDEP) -Wl,-Map,$(notdir $@).map -T ../rvl.ld -Wl,-q
+LDFLAGS	=	-g $(MACHDEP) -Wl,-Map,$(notdir $@).map,-q
 
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with the project
