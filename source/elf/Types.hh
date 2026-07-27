@@ -1,6 +1,8 @@
 #pragma once
 
 #include <array>
+#include <flat_map>
+#include <vector>
 
 namespace Revo::ELF {
 
@@ -101,5 +103,12 @@ struct SectionHeader {
     }
 };
 #pragma pack(pop)
+
+struct Function {
+    std::vector<u32> instructions;
+    std::flat_map<RelativeOffset, std::vector<Rela>> relocations;
+    u32 offset;
+    u32 size;
+};
 
 } // namespace Revo::ELF

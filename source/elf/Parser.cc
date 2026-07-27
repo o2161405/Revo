@@ -1,6 +1,5 @@
 #include "Parser.hh"
 
-#include "elf/ParserResult.hh"
 #include "util/Config.hh"
 #include "util/Util.hh"
 
@@ -8,7 +7,7 @@
 
 namespace Revo::ELF {
 
-std::expected<ParserResult, std::string>
+std::expected<Parser::Result, std::string>
 Parser::parse(const std::filesystem::path& path) {
     std::ifstream stream(path, std::ios::binary);
     if (!stream.is_open()) {
@@ -18,9 +17,9 @@ Parser::parse(const std::filesystem::path& path) {
     return parse(stream);
 }
 
-std::expected<ParserResult, std::string>
+std::expected<Parser::Result, std::string>
 Parser::parse(std::ifstream& stream) {
-    ParserResult result;
+    Parser::Result result;
 
     return parse_elf_header(result, stream)
         .and_then([&]() { return parse_section_headers(result, stream); })
@@ -32,7 +31,7 @@ Parser::parse(std::ifstream& stream) {
 }
 
 std::expected<void, std::string>
-Parser::parse_elf_header(ParserResult& result, std::ifstream& stream) {
+Parser::parse_elf_header(Parser::Result& result, std::ifstream& stream) {
     constexpr auto ELF_MAGIC = std::to_array<u8>({0x7F, 'E', 'L', 'F'});
     constexpr auto EM_PPC{20uz};
     constexpr auto EI_CLASS{4uz};
@@ -71,7 +70,7 @@ Parser::parse_elf_header(ParserResult& result, std::ifstream& stream) {
 }
 
 std::expected<void, std::string>
-Parser::parse_section_headers(ParserResult& result, std::ifstream& stream) {
+Parser::parse_section_headers(Parser::Result& result, std::ifstream& stream) {
     result.sectionHeaders.reserve(result.elfHeader.e_shnum);
 
     stream.seekg(result.elfHeader.e_shoff);
@@ -90,7 +89,7 @@ Parser::parse_section_headers(ParserResult& result, std::ifstream& stream) {
 }
 
 std::expected<void, std::string>
-Parser::parse_string_table(ParserResult& result, std::ifstream& stream) {
+Parser::parse_string_table(Parser::Result& result, std::ifstream& stream) {
     constexpr auto SHN_UNDEF{0uz};
     constexpr auto SHT_STRTAB{3uz};
 
@@ -124,7 +123,7 @@ Parser::parse_string_table(ParserResult& result, std::ifstream& stream) {
 }
 
 std::expected<void, std::string>
-Parser::parse_symbol_table(ParserResult& result, std::ifstream& stream) {
+Parser::parse_symbol_table(Parser::Result& result, std::ifstream& stream) {
     constexpr auto SHT_SYMTAB{2uz};
 
     return get_section(result, ".symtab") //
@@ -174,7 +173,7 @@ Parser::parse_symbol_table(ParserResult& result, std::ifstream& stream) {
 }
 
 std::expected<void, std::string>
-Parser::parse_revo_relocations(ParserResult& result, std::ifstream& stream) {
+Parser::parse_revo_relocations(Parser::Result& result, std::ifstream& stream) {
     return get_section(result, Config::RelaInputSection) //
         .and_then([&](const auto& section) -> std::expected<void, std::string> {
             auto [_, rela_header] = section;
@@ -205,7 +204,7 @@ Parser::parse_revo_relocations(ParserResult& result, std::ifstream& stream) {
 }
 
 std::expected<void, std::string>
-Parser::parse_revo_functions(ParserResult& result, std::ifstream& stream) {
+Parser::parse_revo_functions(Parser::Result& result, std::ifstream& stream) {
     constexpr auto STT_FUNC{2uz};
 
     return get_section(result, Config::InputSection) //
@@ -275,14 +274,14 @@ Parser::parse_revo_functions(ParserResult& result, std::ifstream& stream) {
                 }
             }
 
-            Console::info("Parsed {} Revo functions", result.revoFunctions.size());
+            Console::success("Parsed {} Revo functions", result.revoFunctions.size());
 
             return {};
         });
 }
 
 std::expected<std::pair<Parser::SectionIndex, ELF::SectionHeader>, std::string>
-Parser::get_section(const ParserResult& result, std::string_view specified_section) {
+Parser::get_section(const Parser::Result& result, std::string_view specified_section) {
     auto it = std::ranges::find_if(
         result.sectionHeaders, [&](const ELF::SectionHeader& section_header) {
             if (section_header.sh_name >= result.sectionStringTable.size()) {

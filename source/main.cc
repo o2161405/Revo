@@ -1,7 +1,6 @@
 #include "cli/Argument.hh"
 #include "cli/Parser.hh"
 #include "decode/Decoder.hh"
-#include "decode/DecoderResult.hh"
 #include "elf/Parser.hh"
 
 #include <print>

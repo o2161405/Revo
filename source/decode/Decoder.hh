@@ -1,47 +1,54 @@
 #pragma once
 
-#include "decode/DecoderResult.hh"
+#include "decode/Types.hh"
 #include "elf/Parser.hh"
-#include "instruction/Instruction.hh"
-#include "instruction/Mnemonic.hh"
-#include "instruction/Operand.hh"
-#include "instruction/Specification.hh"
+#include "ppc/Instruction.hh"
+#include "ppc/Mnemonic.hh"
+#include "ppc/Operand.hh"
+#include "ppc/Specification.hh"
 
 #include <expected>
 #include <meta>
+#include <vector>
 
 namespace Revo {
 
 class Decoder {
 public:
-    [[nodiscard]] static std::expected<DecoderResult, std::string>
-    decode(const std::vector<FunctionImpl<u32>>& functions);
+    struct Result {
+        std::vector<Decode::Function> functions;
+    };
+
+    [[nodiscard]] static std::expected<Result, std::string>
+    decode(const std::vector<ELF::Function>& functions);
 
 private:
     // --- Decoding steps ---
-    [[nodiscard]] static std::expected<DecodedInstruction, std::string>
-    decode_instruction(Instruction instruction, u32 address);
+    [[nodiscard]] static std::expected<Decode::Instruction, std::string>
+    decode_instruction(PPC::Instruction instruction, u32 address);
 
-    template <Mnemonic TMnemonic>
-    [[nodiscard]] static constexpr DecodedInstruction
-    decode(Instruction instruction, u32 address);
+    template <PPC::Mnemonic TMnemonic>
+    [[nodiscard]] static constexpr Decode::Instruction
+    decode(PPC::Instruction instruction, u32 address);
 
     // --- Utility functions ---
     [[nodiscard]] static consteval bool
-    is_register(Operand::Type type) {
-        return type == Operand::Type::GPR || type == Operand::Type::FPR ||
-            type == Operand::Type::SPR || type == Operand::Type::CR;
+    is_register(PPC::Operand::Type type) {
+        return type == PPC::Operand::Type::GPR || //
+            type == PPC::Operand::Type::FPR || //
+            type == PPC::Operand::Type::SPR || //
+            type == PPC::Operand::Type::CR;
     }
 
     template <typename... TFields, u32... TAccesses>
     [[nodiscard]] static constexpr bool
-    valid_field_constants(
-        Instruction instruction, FieldConstants<FieldConstant<TFields, TAccesses>...>) {
+    validate_constants(PPC::Instruction instruction,
+        PPC::FieldConstants<PPC::FieldConstant<TFields, TAccesses>...>) {
         return ((instruction.get<TFields>() == TAccesses) && ...);
     }
 
     template <typename TSpecification, typename TField>
-    [[nodiscard]] static consteval Operand::Access
+    [[nodiscard]] static consteval PPC::Operand::Access
     get_access_type();
 };
 

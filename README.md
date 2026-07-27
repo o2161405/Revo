@@ -45,41 +45,14 @@ If you're writing assembly files, declare the section name at the top of your fi
 .section .revo_text, "ax", @progbits
 ```
 
-When compiling with devkitPPC, you must specify the section in your linker script. You can either use the setup provided in `tests/`, or if you want to do it manually (using devkitPPC's new linking system):
+In your Makefile, add `-q` to your `LDFLAGS`.
 
-1. Copy the `libogc_common.ld` and `rvl.ld` files from your devkitPPC installation to your project root:
-    ```bash
-    cp "$DEVKITPPC/powerpc-eabi/lib/"{libogc_common.ld,rvl.ld} .
-    ```
-
-2. Open `libogc_common.ld` and add the Revo section after `.text`:
-    ```
-    .revo_text : ALIGN_WITH_INPUT {
-		*(.revo_text)
-		*(.revo_text.*)
-		. = ALIGN(32);
-	} :text = 0
-    ```
-
-3. Open `rvl.ld` and update the include line to use the local copy of `libogc_common.ld`:
-    ```
-    INCLUDE ../libogc_common.ld
-    ```
-
-4. Edit your `Makefile` and replace your compiler flags with:
-    ```
-    CFLAGS	 = -g -O2 -Wall -ffunction-sections -fno-jump-tables -fno-optimize-sibling-calls $(MACHDEP) $(INCLUDE)
-    CXXFLAGS =	$(CFLAGS) -std=gnu++20 -fno-exceptions -fno-rtti -fno-devirtualize
-    ASFLAGS	 =	$(MACHDEP) -Wa,-mregnames
-    LDFLAGS	 =	-g $(MACHDEP) -Wl,-Map,$(notdir $@).map -T ../rvl.ld -Wl,-q
-    ```
-
-Finally, build your input file:
-```bash
-make
+**Tip**: adding these compiler flags are recommended:
+```
+-ffunction-sections -fno-jump-tables -fno-optimize-sibling-calls -fno-exceptions -fno-rtti -fno-devirtualize
 ```
 
-To virtualize your compiled binary, simply invoke Revo with your file:
+Then compile your program normally and simply invoke Revo with your file:
 ```bash
 ./Revo --input example.elf
 ```

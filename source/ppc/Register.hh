@@ -3,7 +3,7 @@
 /**
  * @brief Defines different register types in the ISA.
  */
-namespace Revo::Register {
+namespace Revo::PPC::Register {
 
 /* clang-format off */
 
@@ -164,4 +164,4 @@ enum class CR : u8 {
 
 /* clang-format on */
 
-} // namespace Revo::Register
+} // namespace Revo::PPC::Register

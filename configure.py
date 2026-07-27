@@ -68,6 +68,16 @@ class Build:
         "main": []
     })
 
+debug_flags = [
+    "-DBUILD_DEBUG", "-O0", "-ggdb", "-fno-omit-frame-pointer"
+]
+
+if not ON_WINDOWS:
+    debug_flags.append("-fsanitize=address,undefined")
+else:
+    print("Couldn't link ASan and UBSan libraries because Windows's " \
+          "version of GCC doesn't support them yet. You can still build.")
+
 builds = [
     Build(
         name="target",
@@ -77,17 +87,14 @@ builds = [
     Build(
         name="debug",
         suffix="-debug",
-        flags=[
-            "-DBUILD_DEBUG", "-O0", "-ggdb", "-fsanitize=address,undefined",
-            "-fno-omit-frame-pointer"
-        ]
+        flags=debug_flags
     )
 ]
 
 # Compile files
 def get_files():
     sep = re.escape(os.path.sep)
-    main_regex = re.compile(rf".*{sep}host{sep}main\.cc$")
+    main_regex = re.compile(rf".*{sep}main\.cc$")
 
     main_files = []
     common_files = []
@@ -131,8 +138,12 @@ for build in builds:
     exe_obj = build.obj_files["main"] + [librevo_path]
     
     # Link ASan and UBSan runtimes
-    current_ldflags = " ".join(build.flags)
-    n.build(exe_path, "ld", exe_obj, variables={"ldflags": current_ldflags})
+    build_ldflags = " ".join(build.flags)
+
+    if ON_WINDOWS:
+        build_ldflags += " -lstdc++exp"
+
+    n.build(exe_path, "ld", exe_obj, variables={"ldflags": build_ldflags})
 
 n.rule("configure", command=f"{sys.executable} configure.py", generator=True)
 n.build("build.ninja", "configure", implicit=["configure.py", os.path.join("vendor", "ninja_syntax.py")])

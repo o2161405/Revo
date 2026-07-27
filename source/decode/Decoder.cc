@@ -1,18 +1,20 @@
 #include "Decoder.hh"
 
-#include "instruction/Layout.hh"
+#include "ppc/Layout.hh"
 
 #include <algorithm>
 #include <meta>
 
 namespace Revo {
 
-std::expected<DecoderResult, std::string>
-Decoder::decode(const std::vector<FunctionImpl<u32>>& functions) {
-    DecoderResult result;
+using namespace Revo::PPC;
+
+std::expected<Decoder::Result, std::string>
+Decoder::decode(const std::vector<ELF::Function>& functions) {
+    Decoder::Result result;
 
     for (const auto& function : functions) {
-        std::vector<DecodedInstruction> instructions;
+        std::vector<Decode::Instruction> instructions;
         instructions.reserve(function.instructions.size());
 
         for (auto [index, raw] : std::views::enumerate(function.instructions)) {
@@ -33,13 +35,13 @@ Decoder::decode(const std::vector<FunctionImpl<u32>>& functions) {
             .size = function.size});
     }
 
-    Console::info("Decoded {} functions", result.functions.size());
+    Console::success("Decoded {} functions", result.functions.size());
     return result;
 }
 
-std::expected<DecodedInstruction, std::string>
+std::expected<Decode::Instruction, std::string>
 Decoder::decode_instruction(Instruction instruction, u32 address) {
-    const auto opcd = instruction.get<InstructionLayout::OPCD>();
+    const auto opcd = instruction.get<Layout::OPCD>();
     std::optional<u32> xo;
 
     template for (constexpr auto enumerator :
@@ -52,7 +54,7 @@ Decoder::decode_instruction(Instruction instruction, u32 address) {
         }
 
         if constexpr (HasFieldConstants<Specification>) {
-            if (!valid_field_constants(instruction, typename Specification::Constants{})) {
+            if (!validate_constants(instruction, typename Specification::Constants{})) {
                 continue;
             }
         }
@@ -86,7 +88,7 @@ Decoder::decode_instruction(Instruction instruction, u32 address) {
 }
 
 template <Mnemonic TMnemonic>
-[[nodiscard]] constexpr DecodedInstruction
+[[nodiscard]] constexpr Decode::Instruction
 Decoder::decode(Instruction instruction, u32 address) {
     using Specification = InstructionSpecification<TMnemonic>;
     using Layout = Specification::Layout;
@@ -110,7 +112,7 @@ Decoder::decode(Instruction instruction, u32 address) {
         }
     }
 
-    DecodedInstruction decoded_instruction{.mnemonic = TMnemonic};
+    Decode::Instruction decoded_instruction{.mnemonic = TMnemonic};
 
     template for (constexpr auto field : fields) {
         using TField = [:field:];

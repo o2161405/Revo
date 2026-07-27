@@ -1,13 +1,13 @@
 #pragma once
 
-#include "instruction/Layout.hh"
-#include "instruction/Mnemonic.hh"
+#include "ppc/Layout.hh"
+#include "ppc/Mnemonic.hh"
 
 #include <concepts>
 
-namespace Revo {
+namespace Revo::PPC {
 
-using namespace InstructionLayout;
+using namespace Layout;
 
 /**
  * @brief API for whether a specification has an extended opcode.
@@ -343,4 +343,4 @@ struct InstructionSpecification<Mnemonic::ADDIC_RC> {
 };
 /// \endcond
 
-} // namespace Revo
+} // namespace Revo::PPC
