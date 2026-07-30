@@ -110,15 +110,13 @@ Parser::parse_string_table(Parser::Result& result, std::ifstream& stream) {
             "Got SHT_STRTAB type flag of {} (expected {})", strtab_header.sh_type, SHT_STRTAB));
     }
 
-    result.sectionStringTable.resize(strtab_header.sh_size);
+    result.sectionStringTable.resize(strtab_header.sh_size + 1);
     stream.seekg(strtab_header.sh_offset);
     if (!stream.read(result.sectionStringTable.data(), strtab_header.sh_size)) {
         return std::unexpected("reached EOF whilst reading the string table");
     }
 
-    result.sectionStringTable.push_back('\0');
     Console::info("Parsed string table");
-
     return {};
 }
 
@@ -144,12 +142,11 @@ Parser::parse_symbol_table(Parser::Result& result, std::ifstream& stream) {
 
             // Read string table
             const auto& strtab_header = result.sectionHeaders[symtab_header.sh_link];
-            result.symbolStringTable.resize(strtab_header.sh_size);
+            result.symbolStringTable.resize(strtab_header.sh_size + 1);
             stream.seekg(strtab_header.sh_offset);
             if (!stream.read(result.symbolStringTable.data(), strtab_header.sh_size)) {
                 return std::unexpected("reached EOF whilst reading the symbol string table");
             }
-            result.symbolStringTable.push_back('\0');
 
             // Read symbols
             if (symtab_header.sh_size % sizeof(Symbol) != 0) {
