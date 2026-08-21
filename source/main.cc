@@ -1,9 +1,19 @@
+#include "cfg/Builder.hh"
 #include "cli/Argument.hh"
 #include "cli/Parser.hh"
 #include "decode/Decoder.hh"
 #include "elf/Parser.hh"
 
-#include <print>
+#include <contracts>
+#include <cstdlib>
+
+void
+handle_contract_violation(const std::contracts::contract_violation& violation) {
+    const auto location = violation.location();
+    Revo::Console::error("Contract violation at {}:{} - {}", //
+        location.file_name(), location.line(), violation.comment());
+    std::abort();
+}
 
 using namespace Revo;
 
@@ -40,6 +50,12 @@ main(int argc, const char* const* argv) {
     auto decode = Decoder::decode(parse->revoFunctions);
     if (!decode) {
         Console::error("Failed to decode: {}", decode.error());
+        return 1;
+    }
+
+    auto graph = CFG::Builder::build(decode->functions);
+    if (!graph) {
+        Console::error("Failed to build CFG: {}", graph.error());
         return 1;
     }
 

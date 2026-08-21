@@ -35,6 +35,18 @@ enum class Mnemonic {
     CMP,      ///< `cmp`
     MTSPR,    ///< `mtspr`
     ADDIC_RC, ///< `addic.`, seperate opcode from `addic`
+    BCCTR,    ///< `bcctr`
+    MFSPR,    ///< `mfspr`
+    STWU,     ///< `stwu`
+    LBZ,      ///< `lbz`
+    ADDIS,    ///< `addis`
+    MULLI,    ///< `mulli`
+    CMPL,     ///< `cmpl`
+    CRXOR,    ///< `crxor`
+    STB,      ///< `stb`
+    ORI,      ///< `ori`
+    XORI,     ///< `xori`
+    CNTLZW,   ///< `cntlzw`
 };
 
 /* clang-format on */

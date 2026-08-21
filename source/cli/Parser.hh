@@ -1,7 +1,8 @@
 #pragma once
 
 #include "cli/Argument.hh"
-#include "cli/Specification.hh"
+#include "cli/ArgumentSpecification.hh"
+#include "cli/Concepts.hh"
 
 #include <expected>
 #include <filesystem>
@@ -28,12 +29,11 @@ public:
             requires HasType<ArgumentSpecification<TType>>
         [[nodiscard]] std::optional<typename ArgumentSpecification<TType>::Type>
         get() const {
-            const auto it = arguments.find(TType);
-            if (it == arguments.end()) {
-                return std::nullopt;
+            if (const auto it = arguments.find(TType); it != arguments.end()) {
+                return std::get<typename ArgumentSpecification<TType>::Type>(it->second);
             }
 
-            return std::get<typename ArgumentSpecification<TType>::Type>(it->second);
+            return std::nullopt;
         }
     };
 
@@ -46,14 +46,14 @@ public:
 private:
     Parser() = default;
 
-    // --- Parsing steps ---
+    // Parsing steps
     [[nodiscard]] static std::expected<void, std::string>
     parse_arguments(Parser::Result& result, std::span<const char* const> arguments);
 
     [[nodiscard]] static std::expected<void, std::string>
     check_required(const Parser::Result& result);
 
-    // --- Utility functions ---
+    // Utility functions
     template <typename TType>
     [[nodiscard]] static std::expected<TType, std::string>
     parse_value(std::string_view value);

@@ -109,6 +109,11 @@ struct Function {
     std::flat_map<RelativeOffset, std::vector<Rela>> relocations;
     u32 offset;
     u32 size;
+
+    [[nodiscard]] constexpr bool
+    contains(u32 address) const {
+        return address >= offset && address < (offset + size);
+    }
 };
 
 } // namespace Revo::ELF

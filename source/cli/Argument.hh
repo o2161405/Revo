@@ -22,9 +22,6 @@ struct Argument {
         Console::LogLevel
     >;
     /* clang-format on */
-
-    Type type;
-    Variant value;
 };
 
 } // namespace Revo::CLI
