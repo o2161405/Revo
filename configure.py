@@ -37,7 +37,6 @@ common_ccflags = [
     '-freflection',
     '-fno-exceptions',
     '-pedantic-errors',
-    '-fno-asynchronous-unwind-tables',
     '-I', 'source',
     '-include', 'source/util/Types.hh',
     '-include', 'source/util/Console.hh',
@@ -63,6 +62,7 @@ class Build:
     name: str
     suffix: str
     flags: list[str]
+    ldflags: list[str] = field(default_factory=list)
     obj_files: dict = field(default_factory=lambda: {
         "common": [],
         "main": []
@@ -82,13 +82,20 @@ builds = [
     Build(
         name="target",
         suffix="",
-        flags=["-O3", "-flto=auto", "-D_FORTIFY_SOURCE=3"]
+        flags=["-O3", "-flto=auto", "-D_FORTIFY_SOURCE=3", "-fno-asynchronous-unwind-tables"],
+        ldflags=["-static"]
+    ),
+    Build(
+        name="perf",
+        suffix="-perf",
+        flags=["-O3", "-g", "-fno-omit-frame-pointer", "-flto=auto", "-D_FORTIFY_SOURCE=3"],
+        ldflags=["-static"]
     ),
     Build(
         name="debug",
         suffix="-debug",
         flags=debug_flags
-    )
+    ),
 ]
 
 # Compile files
@@ -138,7 +145,7 @@ for build in builds:
     exe_obj = build.obj_files["main"] + [librevo_path]
     
     # Link ASan and UBSan runtimes
-    build_ldflags = " ".join(build.flags)
+    build_ldflags = " ".join([*build.flags, *build.ldflags])
 
     if ON_WINDOWS:
         build_ldflags += " -lstdc++exp"

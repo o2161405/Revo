@@ -56,3 +56,10 @@ Then compile your program normally and simply invoke Revo with your file:
 ```bash
 ./Revo --input example.elf
 ```
+
+## Contributing
+I'm not accepting contributors at this time; this is a solo project intended for my personal portfolio, so I won't be looking at pull requests or reviewing anyone else's code.
+
+You are welcome to fork and add features (which is the intended security model of this project anyways), but I'm intentionally not looking at third-party additions to prevent any subconscious biases about design decisions.
+
+Issues for feature requests and bug reports remain open as always.
