@@ -1,68 +1,31 @@
 #pragma once
 
-#include <concepts>
-#include <inplace_vector>
+#include "ppc/Common.hh"
+#include "ppc/Concepts.hh"
+#include "ppc/Field.hh"
+#include "ppc/Mnemonic.hh"
+
+#include <meta>
 #include <ranges>
 #include <type_traits>
-
-#include "ppc/Mnemonic.hh"
-#include "ppc/Operand.hh"
 
 namespace Revo::PPC {
 
 class Instruction {
 public:
-    static constexpr u32 INSTRUCTION_WIDTH = 32;
-
-    template <u8 TStartIndex, u8 TEndIndex, typename TDataType,
-        Operand::Type TOperandType = Operand::Type::None,
-        Operand::Behavior TOperandBehavior = Operand::Behavior::None>
-    struct Field {
-        using data_type = TDataType;
-        static constexpr Operand::Type operand_type = TOperandType;
-        static constexpr Operand::Behavior operand_behaviour = TOperandBehavior;
-
-        static_assert(TStartIndex <= TEndIndex, //
-            "Start index must be less than or equal to the end index");
-        static_assert(TEndIndex < INSTRUCTION_WIDTH,
-            "End index must be less than or equal to the instruction width");
-        static constexpr u8 bits = TEndIndex - TStartIndex + 1;
-        static constexpr u8 shift = static_cast<u8>(INSTRUCTION_WIDTH - TEndIndex - 1);
-        static constexpr u32 mask = (1ULL << bits) - 1;
-        static constexpr bool is_extended_opcode = false;
-    };
-
-    template <u8 TStartIndex, u8 TEndIndex>
-    struct ExtendedOpcode : Field<TStartIndex, TEndIndex, u16> {
-        static constexpr bool is_extended_opcode = true;
-    };
-
     template <typename... TFields>
     struct Layout {
-        static constexpr u32 bits = (0uz + ... + TFields::bits);
+        static constexpr u32 bits = (0u + ... + TFields::bits);
         static constexpr u32 mask = (0u | ... | (TFields::mask << TFields::shift));
-        static constexpr bool has_extended_opcode = (false || ... || TFields::is_extended_opcode);
+        static constexpr bool has_extended_opcode = (false || ... ||
+            IsExtendedOpcodeField<TFields>);
+
         static_assert(bits <= INSTRUCTION_WIDTH,
             "Instruction layout must be less than or equal to the instruction width");
         static_assert(std::popcount(mask) == bits,
             std::format("Instruction layout defines {} total bits are used, but due to one or more "
                         "incorrect shifts, {} total bits are used",
                 bits, mask));
-
-        [[nodiscard]] static constexpr bool
-        uses_reserved_bits(u32 raw) {
-            return (raw & ~mask) != 0;
-        }
-
-        [[nodiscard]] static constexpr u16
-        extended_opcode(u32 raw)
-            requires has_extended_opcode
-        {
-            return (0u | ... |
-                (TFields::is_extended_opcode ?
-                        static_cast<u16>((raw >> TFields::shift) & TFields::mask) :
-                        0u));
-        }
     };
 
     constexpr explicit Instruction(u32 raw) : mRaw(raw) {}
@@ -70,6 +33,28 @@ public:
     [[nodiscard]] constexpr u32
     raw() const {
         return mRaw;
+    }
+
+    template <typename TLayout>
+    [[nodiscard]] constexpr bool
+    uses_reserved_bits() const {
+        return (mRaw & ~TLayout::mask) != 0;
+    }
+
+    template <typename TLayout>
+    [[nodiscard]] constexpr auto
+    extended_opcode() const
+        requires TLayout::has_extended_opcode
+    {
+        static constexpr auto fields = std::define_static_array(
+            std::meta::template_arguments_of(std::meta::dealias(^^TLayout)));
+
+        template for (constexpr auto field : fields) {
+            using TField = [:field:];
+            if constexpr (IsExtendedOpcodeField<TField>) {
+                return (mRaw >> TField::shift) & TField::mask;
+            }
+        }
     }
 
     template <typename TField>
@@ -85,6 +70,21 @@ public:
         else {
             return static_cast<typename TField::data_type>(raw_field);
         }
+    }
+
+    template <typename TSpecification>
+    [[nodiscard]] constexpr bool
+    valid() const {
+        if constexpr (HasConstants<TSpecification>) {
+            template for (constexpr auto constant : TSpecification::constants) {
+                using TField = [:constant.field:];
+                if (get<TField>() != constant.value) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
 private:

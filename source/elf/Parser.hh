@@ -7,7 +7,6 @@
 #include <filesystem>
 #include <flat_map>
 #include <fstream>
-#include <functional>
 #include <string>
 #include <vector>
 
@@ -16,50 +15,54 @@ namespace Revo::ELF {
 class Parser {
 public:
     struct Result {
-        ELF::ELFHeader elfHeader{};
-
-        std::vector<ELF::SectionHeader> sectionHeaders;
+        ELFHeader elfHeader{};
+        std::vector<SectionHeader> sectionHeaders;
         std::vector<char> sectionStringTable;
-
-        std::vector<ELF::Symbol> symbols;
+        std::vector<Symbol> symbols;
         std::vector<char> symbolStringTable;
-
-        std::vector<ELF::Rela> revoRelocations;
+        std::vector<Rela> revoRelocations;
         std::vector<Function> revoFunctions;
     };
 
-    [[nodiscard]] static std::expected<Parser::Result, std::string>
+    [[nodiscard]] static std::expected<Result, std::string>
     parse(const std::filesystem::path& path);
 
-    [[nodiscard]] static std::expected<Parser::Result, std::string>
+    [[nodiscard]] static std::expected<Result, std::string>
     parse(std::ifstream& stream);
 
 private:
-    Parser() = default;
+    explicit Parser(std::ifstream& stream) : mStream(stream) {}
 
-    // --- Parsing steps ---
-    [[nodiscard]] static std::expected<void, std::string>
-    parse_elf_header(Parser::Result& result, std::ifstream& stream);
+    // Parsing steps
+    [[nodiscard]] std::expected<void, std::string>
+    read_elf_header();
 
-    [[nodiscard]] static std::expected<void, std::string>
-    parse_section_headers(Parser::Result& result, std::ifstream& stream);
+    [[nodiscard]] std::expected<void, std::string>
+    read_section_headers();
 
-    [[nodiscard]] static std::expected<void, std::string>
-    parse_string_table(Parser::Result& result, std::ifstream& stream);
+    [[nodiscard]] std::expected<void, std::string>
+    read_string_table();
 
-    [[nodiscard]] static std::expected<void, std::string>
-    parse_symbol_table(Parser::Result& result, std::ifstream& stream);
+    [[nodiscard]] std::expected<void, std::string>
+    read_symbol_table();
 
-    [[nodiscard]] static std::expected<void, std::string>
-    parse_revo_relocations(Parser::Result& result, std::ifstream& stream);
+    [[nodiscard]] std::expected<void, std::string>
+    read_revo_relocations();
 
-    [[nodiscard]] static std::expected<void, std::string>
-    parse_revo_functions(Parser::Result& result, std::ifstream& stream);
+    [[nodiscard]] std::expected<void, std::string>
+    read_revo_functions();
 
-    // --- Utility functions ---
-    using SectionIndex = u32;
-    [[nodiscard]] static std::expected<std::pair<SectionIndex, ELF::SectionHeader>, std::string>
-    get_section(const Parser::Result& result, std::string_view section);
+    [[nodiscard]] std::expected<void, std::string>
+    check_relocations() const
+        pre(std::ranges::is_sorted(mResult.revoFunctions, {}, &Function::offset));
+
+    // Utility functions
+    using SectionIndex = u16;
+    [[nodiscard]] std::expected<std::pair<SectionIndex, SectionHeader>, std::string>
+    get_section(std::string_view section) const;
+
+    Result mResult;
+    std::ifstream& mStream;
 };
 
 } // namespace Revo::ELF

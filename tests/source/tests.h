@@ -6,6 +6,8 @@
 
 #include <gctypes.h>
 
+#include "../../include/Revo/api.h"
+
 extern "C" {
     // Basic tests
     u32 test_common_operations(u32 a, u32 b);
@@ -18,6 +20,14 @@ extern "C" {
     u32 test_fallthrough(u32 x);
     u32 test_nested_loop(u32 outer, u32 inner);
     u32 test_three_way(s32 selector);
+
+    // Control flow edge cases
+    u32 test_branch_function(u32 x);
+    u32 test_function_fallthrough(u32 x);
+    u32 test_local_unreachable();
+#ifdef INCLUDE_UNREACHABLE_TEST
+    u32 test_unreachable(u32 x);
+#endif
 }
 
 struct SubResult {
@@ -59,7 +69,13 @@ enum class TestID {
     Countdown,
     Fallthrough,
     NestedLoop,
-    ThreeWay
+    ThreeWay,
+    BranchFunction,
+    FunctionFallthrough,
+    LocalUnreachable,
+#ifdef INCLUDE_UNREACHABLE_TEST
+    Unreachable
+#endif
 };
 
 struct Test {
@@ -72,7 +88,7 @@ struct TestGroup {
     std::span<const Test> tests;
 };
 
-inline TestResult execute_test(TestID id) {
+VIRTUALIZE static TestResult execute_test(TestID id) {
     if (id == TestID::CommonOperations) {
         u32 got = test_common_operations(2, 3);
         return TestResult::single(got == 6, 6, got);
@@ -116,7 +132,34 @@ inline TestResult execute_test(TestID id) {
         got = test_three_way(0); result.add(got == 0, 0, got);
         got = test_three_way(7); result.add(got == 1, 1, got);
         return result;
-    } 
+    }
+    else if (id == TestID::BranchFunction) {
+        TestResult result;
+        u32 got;
+        got = test_branch_function(0); result.add(got == 1, 1, got);
+        got = test_branch_function(5); result.add(got == 0, 0, got);
+        return result;
+    }
+    else if (id == TestID::FunctionFallthrough) {
+        TestResult result;
+        u32 got;
+        got = test_function_fallthrough(0); result.add(got == 3, 3, got);
+        got = test_function_fallthrough(5); result.add(got == 8, 8, got);
+        return result;
+    }
+    else if (id == TestID::LocalUnreachable) {
+        u32 got = test_local_unreachable();
+        return TestResult::single(got == 2, 2, got);
+    }
+#ifdef INCLUDE_UNREACHABLE_TEST
+    else if (id == TestID::Unreachable) {
+        TestResult result;
+        u32 got;
+        got = test_unreachable(0); result.add(got == 0, 0, got);
+        got = test_unreachable(5); result.add(got == 1, 1, got);
+        return result;
+    }
+#endif
     
     return TestResult::single(false, 0, 0); 
 }
@@ -132,7 +175,13 @@ static const Test controlFlowTests[] = {
     { "Countdown", TestID::Countdown },
     { "Fall-through", TestID::Fallthrough },
     { "Nested loop", TestID::NestedLoop },
-    { "Three-way", TestID::ThreeWay }
+    { "Three-way", TestID::ThreeWay },
+    { "Branch function", TestID::BranchFunction },
+    { "Function fallthrough", TestID::FunctionFallthrough },
+    { "Local unreachable", TestID::LocalUnreachable },
+#ifdef INCLUDE_UNREACHABLE_TEST
+    { "Unreachable", TestID::Unreachable }
+#endif
 };
 
 static const TestGroup testGroups[] = {

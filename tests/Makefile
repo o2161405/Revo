@@ -29,6 +29,10 @@ CFLAGS	= -g -O2 -Wall -ffunction-sections -fno-jump-tables -fno-optimize-sibling
 CXXFLAGS	=	$(CFLAGS) -std=gnu++20 -fno-exceptions -fno-rtti -fno-devirtualize
 ASFLAGS	=	$(MACHDEP) -Wa,-mregnames
 
+ifeq ($(INCLUDE_UNREACHABLE_TEST),1)
+    CFLAGS += -DINCLUDE_UNREACHABLE_TEST
+endif
+
 LDFLAGS	=	-g $(MACHDEP) -Wl,-Map,$(notdir $@).map,-q
 
 #---------------------------------------------------------------------------------
@@ -64,6 +68,13 @@ CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
 sFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
 SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.S)))
 BINFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.*)))
+
+EXCLUDED_S_FILE := test_unreachable.S
+SFILES := $(filter-out $(EXCLUDED_S_FILE),$(SFILES))
+
+ifeq ($(INCLUDE_UNREACHABLE_TEST),1)
+    SFILES += $(EXCLUDED_S_FILE)
+endif
 
 #---------------------------------------------------------------------------------
 # use CXX for linking C++ projects, CC for standard C

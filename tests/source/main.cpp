@@ -35,7 +35,7 @@ bool sys_exit_check() {
     return (WPAD_ButtonsDown(0) & WPAD_BUTTON_HOME) != 0;
 }
 
-static void runGroup(const TestGroup &group) {
+VIRTUALIZE static void runGroup(const TestGroup &group) {
     constexpr std::string_view ANSI_GREEN = "\x1b[42;37m";
     constexpr std::string_view ANSI_RED   = "\x1b[41;37m";
     constexpr std::string_view ANSI_RESET = "\x1b[40;37m";

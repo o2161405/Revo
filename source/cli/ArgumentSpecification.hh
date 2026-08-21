@@ -6,24 +6,11 @@
 
 #include <array>
 #include <filesystem>
-#include <functional>
 #include <string_view>
 
 namespace Revo::CLI {
 
 using namespace std::literals::string_view_literals;
-
-template <typename TSpecification>
-concept HasArguments = requires { TSpecification::arguments; };
-
-template <typename TSpecification>
-concept HasType = requires { typename TSpecification::Type; };
-
-template <typename TSpecification>
-concept HasRequired = requires { TSpecification::required; };
-
-template <typename TSpecification>
-concept HasDescription = requires { TSpecification::description; };
 
 template <Argument::Type TType>
 struct ArgumentSpecification;

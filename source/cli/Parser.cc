@@ -15,12 +15,21 @@ namespace {
 template <typename TEnum>
 [[nodiscard]] consteval std::string_view
 enum_string() {
-    /* clang-format off */
+    const auto identifier = [](std::meta::info enumerator) { //
+        return std::meta::identifier_of(enumerator);
+    };
+
     return std::define_static_string(std::meta::enumerators_of(^^TEnum) //
-        | std::views::transform([](std::meta::info enumerator) { return std::meta::identifier_of(enumerator); }) //
+        | std::views::transform(identifier) //
         | std::views::join_with("|"sv) //
         | std::ranges::to<std::string>());
-    /* clang-format on */
+}
+
+[[nodiscard]] constexpr bool
+lower_equals(std::string_view value, std::string_view identifier) noexcept {
+    return std::ranges::equal(value, identifier, [](unsigned char a, unsigned char b) { //
+        return std::tolower(a) == std::tolower(b);
+    });
 }
 
 } // namespace
@@ -34,17 +43,9 @@ Parser::parse_value(std::string_view value) {
 template <>
 std::expected<Console::LogLevel, std::string>
 Parser::parse_value(std::string_view value) {
-    /* clang-format off */
-    constexpr auto equal_string = [](std::string_view value, std::string_view identifier) -> bool {
-        return std::ranges::equal(value, identifier, [](unsigned char a, unsigned char b) { //
-            return std::tolower(a) == std::tolower(b);
-        });
-    };
-    /* clang-format on */
-
     template for (constexpr auto enumerator :
         std::define_static_array(std::meta::enumerators_of(^^Console::LogLevel))) {
-        if (equal_string(value, std::meta::identifier_of(enumerator))) {
+        if (lower_equals(value, std::meta::identifier_of(enumerator))) {
             return [:enumerator:];
         }
     }
@@ -56,11 +57,11 @@ std::expected<Parser::Result, std::string>
 Parser::parse(int argc, const char* const* argv) {
     Parser::Result result;
 
-    const auto argument_count = argc > 1 ? static_cast<std::size_t>(argc - 1) : 0uz;
+    const auto argument_count = argc > 1 ? argc - 1 : 0uz;
     const std::span<const char* const> arguments{argv + 1, argument_count};
 
     return parse_arguments(result, arguments)
-        .and_then([&]() { return check_required(result); })
+        .and_then(std::bind_front(&Parser::check_required, std::cref(result)))
         .transform([&]() { return std::move(result); });
 }
 
@@ -152,8 +153,8 @@ Parser::print_usage() {
 
         if constexpr (HasType<Specification>) {
             if constexpr (std::is_enum_v<typename Specification::Type>) {
-                Console::none("\t{:<15} Available choices: {}", "",
-                    enum_string<typename Specification::Type>());
+                Console::none(
+                    "\t{:<15} Valid options: {}", "", enum_string<typename Specification::Type>());
             }
         }
     }

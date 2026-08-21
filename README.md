@@ -7,7 +7,7 @@
   <img src="https://img.shields.io/github/stars/o2161405/Revo?style=for-the-badge&color=gold" alt="GitHub Stars" />
 </p>
 
-Revo is an experimental code virtualizer for 32-bit PowerPPC executables, geared towards Wii homebrew.
+Revo is an experimental code virtualizer for 32-bit PowerPC executables, geared towards Wii homebrew.
 
 Revo operates under a "Bring Your Own Protections" model; while the code does offer some example mutation and virtualization features, the security of virtualized apps relies on implementing novel, closed-source features.
 
