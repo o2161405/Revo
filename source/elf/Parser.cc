@@ -41,29 +41,29 @@ Parser::read_elf_header() {
     constexpr auto EI_CLASS{4uz};
     constexpr auto ELFCLASS32{1uz};
 
-    if (!mStream.read(reinterpret_cast<char*>(&mResult.elfHeader), sizeof(mResult.elfHeader))) {
+    if (!mStream.read(reinterpret_cast<char*>(&mResult.elf_header), sizeof(mResult.elf_header))) {
         return std::unexpected("reached EOF whilst interpreting header");
     }
 
-    if (!std::ranges::starts_with(mResult.elfHeader.e_ident, ELF_MAGIC)) {
+    if (!std::ranges::starts_with(mResult.elf_header.e_ident, ELF_MAGIC)) {
         return std::unexpected(
             std::format("Got ELF magic of 0x{:02X}{:02X}{:02X}{:02X} (expected 0x7F454C46)",
-                mResult.elfHeader.e_ident[0], mResult.elfHeader.e_ident[1],
-                mResult.elfHeader.e_ident[2], mResult.elfHeader.e_ident[3]));
+                mResult.elf_header.e_ident[0], mResult.elf_header.e_ident[1],
+                mResult.elf_header.e_ident[2], mResult.elf_header.e_ident[3]));
     }
 
-    Util::byteswap(mResult.elfHeader);
+    Util::byteswap(mResult.elf_header);
 
-    if (mResult.elfHeader.e_machine != EM_PPC) {
+    if (mResult.elf_header.e_machine != EM_PPC) {
         return std::unexpected(std::format(
-            "Got e_machine value of {} (expected {})", mResult.elfHeader.e_machine, EM_PPC));
+            "Got e_machine value of {} (expected {})", mResult.elf_header.e_machine, EM_PPC));
     }
 
-    if (mResult.elfHeader.e_ident[EI_CLASS] != ELFCLASS32) {
+    if (mResult.elf_header.e_ident[EI_CLASS] != ELFCLASS32) {
         return std::unexpected(
             std::format("Got EI_CLASS value of {} (expected {}). Make sure your input binary is "
                         "32-bit and try again.",
-                mResult.elfHeader.e_ident[EI_CLASS], ELFCLASS32));
+                mResult.elf_header.e_ident[EI_CLASS], ELFCLASS32));
     }
 
     Console::info("Parsed ELF header");
@@ -72,20 +72,20 @@ Parser::read_elf_header() {
 
 std::expected<void, std::string>
 Parser::read_section_headers() {
-    mResult.sectionHeaders.reserve(mResult.elfHeader.e_shnum);
+    mResult.section_headers.reserve(mResult.elf_header.e_shnum);
 
-    mStream.seekg(mResult.elfHeader.e_shoff);
-    for (auto i{0uz}; i < mResult.elfHeader.e_shnum; ++i) {
+    mStream.seekg(mResult.elf_header.e_shoff);
+    for (auto i{0uz}; i < mResult.elf_header.e_shnum; ++i) {
         SectionHeader section_header;
         if (!mStream.read(reinterpret_cast<char*>(&section_header), sizeof(SectionHeader))) {
             return std::unexpected("reached EOF whilst reading section headers");
         }
 
         Util::byteswap(section_header);
-        mResult.sectionHeaders.push_back(section_header);
+        mResult.section_headers.push_back(section_header);
     }
 
-    Console::info("Parsed {} section headers", mResult.sectionHeaders.size());
+    Console::info("Parsed {} section headers", mResult.section_headers.size());
     return {};
 }
 
@@ -94,30 +94,30 @@ Parser::read_string_table() {
     constexpr auto SHN_UNDEF{0uz};
     constexpr auto SHT_STRTAB{3uz};
 
-    if (mResult.elfHeader.e_shstrndx == SHN_UNDEF) {
+    if (mResult.elf_header.e_shstrndx == SHN_UNDEF) {
         return std::unexpected(
             std::format("Got string table index of {} (expected non-zero value)", SHN_UNDEF));
     }
 
-    if (mResult.elfHeader.e_shstrndx >= mResult.sectionHeaders.size()) {
+    if (mResult.elf_header.e_shstrndx >= mResult.section_headers.size()) {
         return std::unexpected(
             std::format("ELF header size ({}) and section header size ({}) do not match",
-                mResult.elfHeader.e_shstrndx, mResult.sectionHeaders.size()));
+                mResult.elf_header.e_shstrndx, mResult.section_headers.size()));
     }
 
-    const auto& strtab_header = mResult.sectionHeaders[mResult.elfHeader.e_shstrndx];
+    const auto& strtab_header = mResult.section_headers[mResult.elf_header.e_shstrndx];
     if (strtab_header.sh_type != SHT_STRTAB) {
         return std::unexpected(std::format(
             "Got SHT_STRTAB type flag of {} (expected {})", strtab_header.sh_type, SHT_STRTAB));
     }
 
-    mResult.sectionStringTable.resize(strtab_header.sh_size);
+    mResult.section_string_table.resize(strtab_header.sh_size);
     mStream.seekg(strtab_header.sh_offset);
-    if (!mStream.read(mResult.sectionStringTable.data(), strtab_header.sh_size)) {
+    if (!mStream.read(mResult.section_string_table.data(), strtab_header.sh_size)) {
         return std::unexpected("reached EOF whilst reading the string table");
     }
 
-    mResult.sectionStringTable.push_back('\0');
+    mResult.section_string_table.push_back('\0');
 
     Console::info("Parsed string table");
     return {};
@@ -139,19 +139,19 @@ Parser::read_symbol_table() {
             "Got SHT_SYMTAB type flag of {} (expected {})", symtab_header.sh_type, SHT_SYMTAB));
     }
 
-    if (symtab_header.sh_link == 0 || symtab_header.sh_link >= mResult.sectionHeaders.size()) {
+    if (symtab_header.sh_link == 0 || symtab_header.sh_link >= mResult.section_headers.size()) {
         return std::unexpected(std::format("Got symbol table index link of {} (expected <{})",
-            symtab_header.sh_link, mResult.sectionHeaders.size()));
+            symtab_header.sh_link, mResult.section_headers.size()));
     }
 
     // Read string table
-    const auto& strtab_header = mResult.sectionHeaders[symtab_header.sh_link];
-    mResult.symbolStringTable.resize(strtab_header.sh_size);
+    const auto& strtab_header = mResult.section_headers[symtab_header.sh_link];
+    mResult.symbol_string_table.resize(strtab_header.sh_size);
     mStream.seekg(strtab_header.sh_offset);
-    if (!mStream.read(mResult.symbolStringTable.data(), strtab_header.sh_size)) {
+    if (!mStream.read(mResult.symbol_string_table.data(), strtab_header.sh_size)) {
         return std::unexpected("reached EOF whilst reading the symbol string table");
     }
-    mResult.symbolStringTable.push_back('\0');
+    mResult.symbol_string_table.push_back('\0');
 
     // Read symbols
     if (symtab_header.sh_size % sizeof(Symbol) != 0) {
@@ -186,16 +186,16 @@ Parser::read_revo_relocations() {
             rela_header.sh_size, sizeof(Rela)));
     }
 
-    mResult.revoRelocations.resize(rela_header.sh_size / sizeof(Rela));
+    mResult.revo_relocations.resize(rela_header.sh_size / sizeof(Rela));
     mStream.seekg(rela_header.sh_offset);
     if (!mStream.read(
-            reinterpret_cast<char*>(mResult.revoRelocations.data()), rela_header.sh_size)) {
+            reinterpret_cast<char*>(mResult.revo_relocations.data()), rela_header.sh_size)) {
         return std::unexpected("reached EOF whilst reading rela section");
     }
 
-    Util::byteswap(mResult.revoRelocations);
+    Util::byteswap(mResult.revo_relocations);
 
-    Console::info("Parsed {} Revo relocations", mResult.revoRelocations.size());
+    Console::info("Parsed {} Revo relocations", mResult.revo_relocations.size());
     return {};
 }
 
@@ -252,7 +252,7 @@ Parser::read_revo_functions() {
 
         std::flat_map<u32 /*relative offset*/, std::vector<Rela>> relocations;
 
-        for (auto [index, rela] : std::views::enumerate(mResult.revoRelocations)) {
+        for (auto [index, rela] : std::views::enumerate(mResult.revo_relocations)) {
             if (symbol.contains(rela.r_offset)) {
                 relocations[rela.r_offset - symbol.st_value].push_back(rela);
                 Console::debug(
@@ -260,16 +260,16 @@ Parser::read_revo_functions() {
             }
         }
 
-        mResult.revoFunctions.push_back({//
+        mResult.revo_functions.push_back({//
             .instructions = std::move(instructions),
             .relocations = std::move(relocations),
             .offset = symbol.st_value,
             .size = symbol.st_size});
     }
 
-    std::ranges::sort(mResult.revoFunctions, {}, &Function::offset);
+    std::ranges::sort(mResult.revo_functions, {}, &Function::offset);
 
-    for (const auto& [previous, next] : std::views::pairwise(mResult.revoFunctions)) {
+    for (const auto& [previous, next] : std::views::pairwise(mResult.revo_functions)) {
         if (previous.offset + previous.size > next.offset) {
             return std::unexpected(
                 std::format("function at {:#x} (size of {:#x}) overlaps with function at {:#x}",
@@ -277,16 +277,16 @@ Parser::read_revo_functions() {
         }
     }
 
-    Console::success("Parsed {} Revo functions", mResult.revoFunctions.size());
+    Console::success("Parsed {} Revo functions", mResult.revo_functions.size());
     return {};
 }
 
 std::expected<void, std::string>
 Parser::check_relocations() const {
-    for (const auto& rela : mResult.revoRelocations) {
+    for (const auto& rela : mResult.revo_relocations) {
         if (const auto it = std::ranges::upper_bound(
-                mResult.revoFunctions, rela.r_offset, {}, &Function::offset);
-            it == mResult.revoFunctions.begin() || !std::prev(it)->contains(rela.r_offset)) {
+                mResult.revo_functions, rela.r_offset, {}, &Function::offset);
+            it == mResult.revo_functions.begin() || !std::prev(it)->contains(rela.r_offset)) {
             return std::unexpected(
                 std::format("relocation {:#x} isn't referenced by a function", rela.r_offset));
         }
@@ -297,12 +297,12 @@ Parser::check_relocations() const {
 
 std::expected<std::pair<Parser::SectionIndex, SectionHeader>, std::string>
 Parser::get_section(std::string_view specified_section) const {
-    for (auto [index, section_header] : Util::enumerate<SectionIndex>(mResult.sectionHeaders)) {
-        if (section_header.sh_name >= mResult.sectionStringTable.size()) {
+    for (auto [index, section_header] : Util::enumerate<SectionIndex>(mResult.section_headers)) {
+        if (section_header.sh_name >= mResult.section_string_table.size()) {
             continue;
         }
 
-        std::string_view section_name{mResult.sectionStringTable.data() + section_header.sh_name};
+        std::string_view section_name{mResult.section_string_table.data() + section_header.sh_name};
 
         if (section_name == specified_section) {
             return std::pair{index, section_header};

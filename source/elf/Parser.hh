@@ -15,13 +15,13 @@ namespace Revo::ELF {
 class Parser {
 public:
     struct Result {
-        ELFHeader elfHeader{};
-        std::vector<SectionHeader> sectionHeaders;
-        std::vector<char> sectionStringTable;
+        ELFHeader elf_header{};
+        std::vector<SectionHeader> section_headers;
+        std::vector<char> section_string_table;
         std::vector<Symbol> symbols;
-        std::vector<char> symbolStringTable;
-        std::vector<Rela> revoRelocations;
-        std::vector<Function> revoFunctions;
+        std::vector<char> symbol_string_table;
+        std::vector<Rela> revo_relocations;
+        std::vector<Function> revo_functions;
     };
 
     [[nodiscard]] static std::expected<Result, std::string>
@@ -54,7 +54,7 @@ private:
 
     [[nodiscard]] std::expected<void, std::string>
     check_relocations() const
-        pre(std::ranges::is_sorted(mResult.revoFunctions, {}, &Function::offset));
+        pre(std::ranges::is_sorted(mResult.revo_functions, {}, &Function::offset));
 
     // Utility functions
     using SectionIndex = u16;

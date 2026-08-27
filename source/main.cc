@@ -47,7 +47,7 @@ main(int argc, const char* const* argv) {
         return 1;
     }
 
-    auto decode = Decoder::decode(parse->revoFunctions);
+    auto decode = Decoder::decode(parse->revo_functions);
     if (!decode) {
         Console::error("Failed to decode: {}", decode.error());
         return 1;
