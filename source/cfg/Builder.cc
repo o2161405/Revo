@@ -23,7 +23,8 @@ Builder::build(std::span<const Decode::Function> functions) {
         .and_then(std::bind_front(&Builder::check_returns, &builder))
         .and_then(std::bind_front(&Builder::check_unreachable, &builder))
         .transform([&] {
-            Console::success("Built graph");
+            Console::success("Graphed {} blocks and {} edges", //
+                builder.mGraph.blocks.size(), builder.mGraph.edges.size());
             return std::move(builder.mGraph);
         });
 }
@@ -64,7 +65,6 @@ Builder::mark_leaders(std::span<const Decode::Function> functions) {
         }
     }
 
-    Console::info("Marked {} leaders", mLeaders.size());
     return {};
 }
 
@@ -86,7 +86,6 @@ Builder::construct_blocks(std::span<const Decode::Function> functions) {
                 | std::ranges::to<std::vector>());
     }
 
-    Console::info("Constructed {} blocks", mGraph.blocks.size());
     return {};
 }
 
@@ -133,7 +132,6 @@ Builder::construct_edges() {
             edge.source_address, edge.destination_address);
     }
 
-    Console::info("Constructed {} edges", mGraph.edges.size());
     return {};
 }
 
@@ -154,8 +152,7 @@ Builder::check_returns() {
             }
         }
     }
-
-    Console::debug("Checked {} functions", mGraph.functions.size());
+    
     return {};
 }
 

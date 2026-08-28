@@ -1,13 +1,14 @@
 #pragma once
 
+#include "elf/Section.hh"
 #include "elf/Types.hh"
 
-#include <array>
 #include <expected>
 #include <filesystem>
-#include <flat_map>
 #include <fstream>
+#include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace Revo::ELF {
@@ -16,12 +17,13 @@ class Parser {
 public:
     struct Result {
         ELFHeader elf_header{};
-        std::vector<SectionHeader> section_headers;
-        std::vector<char> section_string_table;
+        std::vector<Section> sections;
         std::vector<Symbol> symbols;
-        std::vector<char> symbol_string_table;
         std::vector<Rela> revo_relocations;
         std::vector<Function> revo_functions;
+
+        [[nodiscard]] std::optional<const Section&>
+        get_section(std::string_view name) const;
     };
 
     [[nodiscard]] static std::expected<Result, std::string>
@@ -38,10 +40,10 @@ private:
     read_elf_header();
 
     [[nodiscard]] std::expected<void, std::string>
-    read_section_headers();
+    read_sections();
 
     [[nodiscard]] std::expected<void, std::string>
-    read_string_table();
+    read_section_names();
 
     [[nodiscard]] std::expected<void, std::string>
     read_symbol_table();
@@ -53,13 +55,15 @@ private:
     read_revo_functions();
 
     [[nodiscard]] std::expected<void, std::string>
-    check_relocations() const
-        pre(std::ranges::is_sorted(mResult.revo_functions, {}, &Function::offset));
+    check_functions();
+
+    [[nodiscard]] std::expected<void, std::string>
+    check_relocations() const;
 
     // Utility functions
-    using SectionIndex = u16;
-    [[nodiscard]] std::expected<std::pair<SectionIndex, SectionHeader>, std::string>
-    get_section(std::string_view section) const;
+    template <typename TType>
+    [[nodiscard]] static std::expected<std::vector<TType>, std::string>
+    read_table(const Section& section);
 
     Result mResult;
     std::ifstream& mStream;

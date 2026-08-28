@@ -6,8 +6,6 @@
 
 namespace Revo::ELF {
 
-using RelativeOffset = u32;
-
 #pragma pack(push, 1)
 struct Rela {
     /// \cond
@@ -73,40 +71,11 @@ struct ELFHeader {
     u16 e_shstrndx;
     /// \endcond
 };
-
-struct SectionHeader {
-    /// \cond
-    u32 sh_name;
-    u32 sh_type;
-    u32 sh_flags;
-    u32 sh_addr;
-    u32 sh_offset;
-    u32 sh_size;
-    u32 sh_link;
-    u32 sh_info;
-    u32 sh_addralign;
-    u32 sh_entsize;
-    /// \endcond
-
-    [[nodiscard]] constexpr bool
-    contains(const Symbol& symbol) const {
-        if (symbol.st_value < sh_addr) {
-            return false;
-        }
-
-        const RelativeOffset offset = symbol.st_value - sh_addr;
-        if (offset >= sh_size || symbol.st_size > sh_size - offset) {
-            return false;
-        }
-
-        return true;
-    }
-};
 #pragma pack(pop)
 
 struct Function {
     std::vector<u32> instructions;
-    std::flat_map<RelativeOffset, std::vector<Rela>> relocations;
+    std::flat_map<u32, std::vector<Rela>> relocations;
     u32 offset;
     u32 size;
 
