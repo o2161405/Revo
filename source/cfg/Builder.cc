@@ -11,6 +11,8 @@
 #include <meta>
 #include <ranges>
 
+// todo: make this use symbol names instead of addresses
+
 namespace Revo::CFG {
 
 std::expected<Graph, std::string>

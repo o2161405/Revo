@@ -2,7 +2,6 @@
 
 #include "elf/Symbol.hh"
 #include "ppc/Common.hh"
-#include "util/Config.hh"
 #include "util/Util.hh"
 
 #include <algorithm>
@@ -213,7 +212,7 @@ Parser::read_symbols() {
 
 std::expected<void, std::string>
 Parser::read_revo_relocations() {
-    const auto rela_section = mResult.get_section(Config::RelaInputSection);
+    const auto rela_section = mResult.get_section(".rela.revo_text");
     if (!rela_section) {
         Console::warning("No relocation section found, attempting parse anyway");
         return {};
@@ -232,9 +231,9 @@ std::expected<void, std::string>
 Parser::read_revo_functions() {
     constexpr auto STT_FUNC{2uz};
 
-    const auto input_section = mResult.get_section(Config::InputSection);
+    const auto input_section = mResult.get_section(".revo_text");
     if (!input_section) {
-        return std::unexpected(std::format("failed to get section {}", Config::InputSection));
+        return std::unexpected("failed to get section .revo_text");
     }
 
     for (const auto& symbol : mResult.symbols) {
