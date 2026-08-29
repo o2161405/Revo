@@ -1,5 +1,6 @@
 #include "Parser.hh"
 
+#include "elf/Symbol.hh"
 #include "ppc/Common.hh"
 #include "util/Config.hh"
 #include "util/Util.hh"
@@ -23,6 +24,15 @@ Parser::Result::get_section(std::string_view name) const {
     return std::nullopt;
 }
 
+std::optional<const Symbol&>
+Parser::Result::get_symbol(std::string_view name) const {
+    if (const auto it = std::ranges::find(symbols, name, &Symbol::name); it != symbols.end()) {
+        return *it;
+    }
+
+    return std::nullopt;
+}
+
 std::expected<Parser::Result, std::string>
 Parser::parse(const std::filesystem::path& path) {
     std::ifstream stream(path, std::ios::binary);
@@ -40,9 +50,9 @@ Parser::parse(std::ifstream& stream) {
     return parser.read_elf_header()
         .and_then(std::bind_front(&Parser::read_sections, &parser))
         .and_then(std::bind_front(&Parser::read_section_names, &parser))
-        .and_then(std::bind_front(&Parser::read_symbol_table, &parser))
-        .and_then(std::bind_front(&Parser::read_revo_functions, &parser))
+        .and_then(std::bind_front(&Parser::read_symbols, &parser))
         .and_then(std::bind_front(&Parser::read_revo_relocations, &parser))
+        .and_then(std::bind_front(&Parser::read_revo_functions, &parser))
         .and_then(std::bind_front(&Parser::check_functions, &parser))
         .and_then(std::bind_front(&Parser::check_relocations, &parser))
         .transform([&]() {
@@ -93,13 +103,13 @@ Parser::read_sections() {
     mResult.sections.resize(mResult.elf_header.e_shnum);
 
     mStream.seekg(mResult.elf_header.e_shoff);
-    for (auto [index, section] : std::views::enumerate(mResult.sections)) {
+    for (auto [index, section] : Util::enumerate<SectionIndex>(mResult.sections)) {
         if (!mStream.read(reinterpret_cast<char*>(&section.header), sizeof(SectionHeader))) {
             return std::unexpected("reached EOF whilst reading section headers");
         }
 
         Util::byteswap(section.header);
-        section.index = static_cast<SectionIndex>(index);
+        section.index = index;
     }
 
     for (auto& section : mResult.sections) {
@@ -139,27 +149,22 @@ Parser::read_section_names() {
             strtab_section.header.sh_type, SHT_STRTAB));
     }
 
-    const std::string_view string_table{
-        reinterpret_cast<const char*>(strtab_section.data.data()), strtab_section.data.size()};
-
     for (auto& section : mResult.sections) {
-        const auto offset = section.header.sh_name;
-        if (offset >= string_table.size()) {
-            return std::unexpected(std::format( //
-                "section {} has a name offset of {} (expected <{})", //
-                section.index, offset, string_table.size()));
+        const auto name = read_string(strtab_section, section.header.sh_name);
+        if (!name) {
+            return std::unexpected(name.error());
         }
 
-        const auto end = string_table.find('\0', offset);
-        section.name = string_table.substr(offset, end - offset);
+        section.name = *name;
     }
 
     return {};
 }
 
 std::expected<void, std::string>
-Parser::read_symbol_table() {
+Parser::read_symbols() {
     constexpr auto SHT_SYMTAB{2uz};
+    constexpr auto SHT_STRTAB{3uz};
 
     const auto symtab_section = mResult.get_section(".symtab");
     if (!symtab_section) {
@@ -172,12 +177,37 @@ Parser::read_symbol_table() {
             symtab_section->header.sh_type, SHT_SYMTAB));
     }
 
-    auto symbols = read_table<Symbol>(*symtab_section);
-    if (!symbols) {
-        return std::unexpected(symbols.error());
+    const auto strtab_index = symtab_section->header.sh_link;
+    if (strtab_index >= mResult.sections.size()) {
+        return std::unexpected(std::format( //
+            "section .symtab links to section {} (expected <{})", //
+            strtab_index, mResult.sections.size()));
     }
 
-    mResult.symbols = std::move(*symbols);
+    const auto& strtab_section = mResult.sections[strtab_index];
+    if (strtab_section.header.sh_type != SHT_STRTAB) {
+        return std::unexpected(std::format( //
+            "got SHT_STRTAB type flag of {} (expected {})", //
+            strtab_section.header.sh_type, SHT_STRTAB));
+    }
+
+    const auto headers = read_table<SymbolHeader>(*symtab_section);
+    if (!headers) {
+        return std::unexpected(headers.error());
+    }
+
+    mResult.symbols.reserve(headers->size());
+    for (const auto& header : *headers) {
+        const auto name = read_string(strtab_section, header.st_name);
+        if (!name) {
+            return std::unexpected(name.error());
+        }
+
+        mResult.symbols.push_back({//
+            .header = header,
+            .name = std::string{*name}});
+    }
+
     return {};
 }
 
@@ -208,39 +238,40 @@ Parser::read_revo_functions() {
     }
 
     for (const auto& symbol : mResult.symbols) {
-        if (symbol.st_shndx != input_section->index) {
+        if (symbol.header.st_shndx != input_section->index) {
             continue;
         }
 
         if (symbol.type() != STT_FUNC) {
             Console::debug("Skipped symbol {:#x}: type {} (expected {})", //
-                symbol.st_value, symbol.type(), STT_FUNC);
+                symbol.header.st_value, symbol.type(), STT_FUNC);
             continue;
         }
 
-        if (symbol.st_value % PPC::INSTRUCTION_SIZE != 0) {
+        if (symbol.header.st_value % PPC::INSTRUCTION_SIZE != 0) {
             return std::unexpected(std::format( //
                 "function {:#x} is not aligned to {} bytes", //
-                symbol.st_value, PPC::INSTRUCTION_SIZE));
+                symbol.header.st_value, PPC::INSTRUCTION_SIZE));
         }
 
-        if (symbol.st_size == 0) {
-            return std::unexpected(std::format("function {:#x} has zero size", symbol.st_value));
+        if (symbol.header.st_size == 0) {
+            return std::unexpected(
+                std::format("function {:#x} has zero size", symbol.header.st_value));
         }
 
-        if (symbol.st_size % PPC::INSTRUCTION_SIZE != 0) {
+        if (symbol.header.st_size % PPC::INSTRUCTION_SIZE != 0) {
             return std::unexpected(std::format( //
                 "function {:#x} (size of {}) is not a multiple of {} bytes", //
-                symbol.st_value, symbol.st_size, PPC::INSTRUCTION_SIZE));
+                symbol.header.st_value, symbol.header.st_size, PPC::INSTRUCTION_SIZE));
         }
 
-        const auto bytes = input_section->bytes(symbol.st_value, symbol.st_size);
+        const auto bytes = input_section->bytes(symbol.header.st_value, symbol.header.st_size);
         if (!bytes) {
             return std::unexpected(std::format(
-                "function {:#x} isn't contained within the input section", symbol.st_value));
+                "function {:#x} isn't contained within the input section", symbol.header.st_value));
         }
 
-        std::vector<u32> instructions(symbol.st_size / PPC::INSTRUCTION_SIZE);
+        std::vector<u32> instructions(symbol.header.st_size / PPC::INSTRUCTION_SIZE);
         std::memcpy(instructions.data(), bytes->data(), bytes->size());
         Util::byteswap(instructions);
 
@@ -251,16 +282,16 @@ Parser::read_revo_functions() {
                 continue;
             }
 
-            relocations[relocation.r_offset - symbol.st_value].push_back(relocation);
+            relocations[relocation.r_offset - symbol.header.st_value].push_back(relocation);
             Console::debug("Relocation {:#x} assigned to function {:#x}", //
-                relocation.r_offset, symbol.st_value);
+                relocation.r_offset, symbol.header.st_value);
         }
 
         mResult.revo_functions.push_back({//
             .instructions = std::move(instructions),
             .relocations = std::move(relocations),
-            .offset = symbol.st_value,
-            .size = symbol.st_size});
+            .offset = symbol.header.st_value,
+            .size = symbol.header.st_size});
     }
 
     return {};
@@ -314,6 +345,21 @@ Parser::read_table(const Section& section) {
     Util::byteswap(entries);
 
     return entries;
+}
+
+std::expected<std::string_view, std::string>
+Parser::read_string(const Section& section, u32 offset) {
+    const std::string_view table{
+        reinterpret_cast<const char*>(section.data.data()), section.data.size()};
+
+    if (offset >= table.size()) {
+        return std::unexpected(std::format( //
+            "section {} has a string offset of {} (expected <{})", //
+            section.index, offset, table.size()));
+    }
+
+    const auto end = table.find('\0', offset);
+    return table.substr(offset, end - offset);
 }
 
 } // namespace Revo::ELF

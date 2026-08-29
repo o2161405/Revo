@@ -1,6 +1,7 @@
 #pragma once
 
 #include "elf/Section.hh"
+#include "elf/Symbol.hh"
 #include "elf/Types.hh"
 
 #include <expected>
@@ -24,6 +25,9 @@ public:
 
         [[nodiscard]] std::optional<const Section&>
         get_section(std::string_view name) const;
+
+        [[nodiscard]] std::optional<const Symbol&>
+        get_symbol(std::string_view name) const;
     };
 
     [[nodiscard]] static std::expected<Result, std::string>
@@ -46,7 +50,7 @@ private:
     read_section_names();
 
     [[nodiscard]] std::expected<void, std::string>
-    read_symbol_table();
+    read_symbols();
 
     [[nodiscard]] std::expected<void, std::string>
     read_revo_relocations();
@@ -64,6 +68,9 @@ private:
     template <typename TType>
     [[nodiscard]] static std::expected<std::vector<TType>, std::string>
     read_table(const Section& section);
+
+    [[nodiscard]] static std::expected<std::string_view, std::string>
+    read_string(const Section& section, u32 offset);
 
     Result mResult;
     std::ifstream& mStream;

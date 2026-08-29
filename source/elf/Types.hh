@@ -25,32 +25,6 @@ struct Rela {
     }
 };
 
-struct Symbol {
-    /// \cond
-    u32 st_name;
-    u32 st_value;
-    u32 st_size;
-    u8 st_info;
-    u8 st_other;
-    u16 st_shndx;
-    /// \endcond
-
-    [[nodiscard]] constexpr u8
-    type() const {
-        return st_info & 0xF;
-    }
-
-    [[nodiscard]] constexpr u8
-    bind() const {
-        return st_info >> 4;
-    }
-
-    [[nodiscard]] constexpr bool
-    contains(u32 address) const {
-        return address >= st_value && address < (st_value + st_size);
-    }
-};
-
 struct ELFHeader {
     static constexpr auto IDENT_COUNT{16uz};
 
