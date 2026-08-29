@@ -152,7 +152,7 @@ Builder::check_returns() {
             }
         }
     }
-    
+
     return {};
 }
 

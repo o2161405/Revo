@@ -40,7 +40,7 @@ struct BForm {
 struct SCForm {
     /// \cond
     struct LEV   : ImmediateField<20, 26, u8>{};
-    struct BIT30 : Field<30, 30, u8>{}; // Raw field, no operand
+    struct BIT30 : Field<30, 30, u8>{};
     
     using Impl = Instruction::Layout<OPCD, LEV, BIT30>;
     /// \endcond

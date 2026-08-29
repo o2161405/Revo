@@ -133,14 +133,14 @@ Parser::read_section_names() {
             mResult.elf_header.e_shstrndx, mResult.sections.size()));
     }
 
-    const auto& strtab = mResult.sections[mResult.elf_header.e_shstrndx];
-    if (strtab.header.sh_type != SHT_STRTAB) {
-        return std::unexpected(std::format(
-            "got SHT_STRTAB type flag of {} (expected {})", strtab.header.sh_type, SHT_STRTAB));
+    const auto& strtab_section = mResult.sections[mResult.elf_header.e_shstrndx];
+    if (strtab_section.header.sh_type != SHT_STRTAB) {
+        return std::unexpected(std::format("got SHT_STRTAB type flag of {} (expected {})",
+            strtab_section.header.sh_type, SHT_STRTAB));
     }
 
     const std::string_view string_table{
-        reinterpret_cast<const char*>(strtab.data.data()), strtab.data.size()};
+        reinterpret_cast<const char*>(strtab_section.data.data()), strtab_section.data.size()};
 
     for (auto& section : mResult.sections) {
         const auto offset = section.header.sh_name;

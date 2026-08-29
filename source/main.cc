@@ -15,6 +15,11 @@ handle_contract_violation(const std::contracts::contract_violation& violation) {
     std::abort();
 }
 
+// definitely a good todo somewhat soon:
+// put Decoder in Revo::Decode, and then static functions like Decoder::decode
+// and Parser::parse should be free functions so it's called like ELF::parse
+// instead of ELF::Parser::parse. also get rid of Decoder::Result
+
 using namespace Revo;
 
 int
