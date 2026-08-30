@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+
 namespace Revo::DOL {
 
 #pragma pack(push, 1)

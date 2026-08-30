@@ -36,7 +36,7 @@ operand_access() {
 } // namespace
 
 std::expected<Decoder::Result, std::string>
-Decoder::decode(const std::vector<ELF::Function>& functions) {
+Decoder::decode(std::span<const ELF::Function> functions) {
     Decoder::Result result;
 
     for (const auto& function : functions) {

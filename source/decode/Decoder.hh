@@ -20,7 +20,7 @@ public:
     };
 
     [[nodiscard]] static std::expected<Result, std::string>
-    decode(const std::vector<ELF::Function>& functions);
+    decode(std::span<const ELF::Function> functions);
 
 private:
     // Decoding steps

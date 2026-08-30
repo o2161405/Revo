@@ -254,8 +254,8 @@ Parser::read_revo_functions() {
         }
 
         if (symbol.header.st_size == 0) {
-            return std::unexpected(
-                std::format("function {:#x} has zero size", symbol.header.st_value));
+            return std::unexpected(std::format( //
+                "function {:#x} has zero size", symbol.header.st_value));
         }
 
         if (symbol.header.st_size % PPC::INSTRUCTION_SIZE != 0) {
@@ -348,17 +348,17 @@ Parser::read_table(const Section& section) {
 
 std::expected<std::string_view, std::string>
 Parser::read_string(const Section& section, u32 offset) {
-    const std::string_view table{
+    const std::string_view string_table{
         reinterpret_cast<const char*>(section.data.data()), section.data.size()};
 
-    if (offset >= table.size()) {
+    if (offset >= string_table.size()) {
         return std::unexpected(std::format( //
             "section {} has a string offset of {} (expected <{})", //
-            section.index, offset, table.size()));
+            section.index, offset, string_table.size()));
     }
 
-    const auto end = table.find('\0', offset);
-    return table.substr(offset, end - offset);
+    const auto end = string_table.find('\0', offset);
+    return string_table.substr(offset, end - offset);
 }
 
 } // namespace Revo::ELF
