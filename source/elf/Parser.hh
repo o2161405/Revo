@@ -19,34 +19,37 @@ parse(std::istream& stream);
 
 namespace Impl {
 
+// Parsing steps
 [[nodiscard]] std::expected<void, std::string>
-read_elf_header(Object&, std::istream&);
+read_elf_header(Object& object, std::istream& stream);
 
 [[nodiscard]] std::expected<void, std::string>
-read_sections(Object&, std::istream&);
+read_sections(Object& object, std::istream& stream);
 
 [[nodiscard]] std::expected<void, std::string>
-read_section_names(Object&);
+read_section_names(Object& object);
 
 [[nodiscard]] std::expected<void, std::string>
-read_symbols(Object&);
+read_symbols(Object& object);
 
 [[nodiscard]] std::expected<void, std::string>
-read_revo_relocations(Object&);
+read_revo_relocations(Object& object);
 
 [[nodiscard]] std::expected<void, std::string>
-read_revo_functions(Object&);
+read_revo_functions(Object& object);
 
 [[nodiscard]] std::expected<void, std::string>
-check_functions(Object&);
+check_functions(const Object& object)
+    pre(std::ranges::is_sorted(object.revo_functions, {}, &Function::offset));
 
 [[nodiscard]] std::expected<void, std::string>
-check_relocations(const Object&);
+check_relocations(const Object& object)
+    pre(std::ranges::is_sorted(object.revo_functions, {}, &Function::offset));
 
+// Utility functions
 [[nodiscard]] std::expected<std::string_view, std::string>
 read_string(const Section& section, u32 offset);
 
-// see comment in .cc file about why the definition isn't here
 template <typename TType>
 [[nodiscard]] std::expected<std::vector<TType>, std::string>
 read_table(const Section& section);

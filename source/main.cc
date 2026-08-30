@@ -41,19 +41,19 @@ main(int argc, const char* const* argv) {
 
     auto input_file = cli->get<CLI::Argument::Type::Input>();
 
-    auto parse = ELF::parse(*input_file);
-    if (!parse) {
-        Console::error("Failed to parse ELF file: {}", parse.error());
+    auto object = ELF::parse(*input_file);
+    if (!object) {
+        Console::error("Failed to parse ELF file: {}", object.error());
         return 1;
     }
 
-    auto decode = Decoder::decode(parse->revo_functions);
-    if (!decode) {
-        Console::error("Failed to decode: {}", decode.error());
+    auto functions = Decode::decode(object->revo_functions);
+    if (!functions) {
+        Console::error("Failed to decode: {}", functions.error());
         return 1;
     }
 
-    auto graph = CFG::Builder::build(decode->functions);
+    auto graph = CFG::Builder::build(*functions);
     if (!graph) {
         Console::error("Failed to build CFG: {}", graph.error());
         return 1;

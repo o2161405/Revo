@@ -1,7 +1,6 @@
 #pragma once
 
 #include "elf/Types.hh"
-#include "ppc/Instruction.hh"
 #include "ppc/InstructionSpecification.hh"
 #include "ppc/Mnemonic.hh"
 #include "ppc/Operand.hh"

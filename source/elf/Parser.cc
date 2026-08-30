@@ -34,6 +34,7 @@ parse(std::istream& stream) {
         .and_then([&] { return Impl::read_symbols(object); })
         .and_then([&] { return Impl::read_revo_relocations(object); })
         .and_then([&] { return Impl::read_revo_functions(object); })
+        .transform([&] { std::ranges::sort(object.revo_functions, {}, &Function::offset); })
         .and_then([&] { return Impl::check_functions(object); })
         .and_then([&] { return Impl::check_relocations(object); })
         .transform([&] {
@@ -281,9 +282,7 @@ read_revo_functions(Object& object) {
 }
 
 std::expected<void, std::string>
-check_functions(Object& object) {
-    std::ranges::sort(object.revo_functions, {}, &Function::offset);
-
+check_functions(const Object& object) {
     for (const auto& [previous, next] : std::views::pairwise(object.revo_functions)) {
         if (previous.offset + previous.size > next.offset) {
             return std::unexpected(std::format( //
@@ -325,11 +324,6 @@ read_string(const Section& section, u32 offset) {
     return string_table.substr(offset, end - offset);
 }
 
-// putting this in the source file is technically bad since you need to have
-// this function's definition in the same translation unit as where's it's
-// used (aka in the header) but this case it's fine since it's instantiated
-// with all reasonable types within this file so if we did testing in some
-// other file it'd work.
 template <typename TType>
 [[nodiscard]] std::expected<std::vector<TType>, std::string>
 read_table(const Section& section) {

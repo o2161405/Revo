@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ppc/Concepts.hh"
-#include "ppc/Layout.hh"
+#include "ppc/Form.hh"
 #include "ppc/Mnemonic.hh"
 
 #include <algorithm>
@@ -11,7 +11,7 @@
 
 namespace Revo::PPC {
 
-using namespace Layout;
+using namespace Form;
 
 template <Mnemonic TMnemonic>
 struct InstructionSpecification;
