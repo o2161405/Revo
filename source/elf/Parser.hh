@@ -1,8 +1,6 @@
 #pragma once
 
-#include "elf/Section.hh"
-#include "elf/Symbol.hh"
-#include "elf/Types.hh"
+#include "elf/Object.hh"
 
 #include <expected>
 #include <filesystem>
@@ -16,24 +14,10 @@ namespace Revo::ELF {
 
 class Parser {
 public:
-    struct Result {
-        ELFHeader elf_header{};
-        std::vector<Section> sections;
-        std::vector<Symbol> symbols;
-        std::vector<Rela> revo_relocations;
-        std::vector<Function> revo_functions;
-
-        [[nodiscard]] std::optional<const Section&>
-        get_section(std::string_view name) const;
-
-        [[nodiscard]] std::optional<const Symbol&>
-        get_symbol(std::string_view name) const;
-    };
-
-    [[nodiscard]] static std::expected<Result, std::string>
+    [[nodiscard]] static std::expected<Object, std::string>
     parse(const std::filesystem::path& path);
 
-    [[nodiscard]] static std::expected<Result, std::string>
+    [[nodiscard]] static std::expected<Object, std::string>
     parse(std::ifstream& stream);
 
 private:
@@ -72,7 +56,7 @@ private:
     [[nodiscard]] static std::expected<std::string_view, std::string>
     read_string(const Section& section, u32 offset);
 
-    Result mResult;
+    Object mObject;
     std::ifstream& mStream;
 };
 

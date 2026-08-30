@@ -15,7 +15,7 @@
 namespace Revo::ELF {
 
 std::optional<const Section&>
-Parser::Result::get_section(std::string_view name) const {
+Object::get_section(std::string_view name) const {
     if (const auto it = std::ranges::find(sections, name, &Section::name); it != sections.end()) {
         return *it;
     }
@@ -24,7 +24,7 @@ Parser::Result::get_section(std::string_view name) const {
 }
 
 std::optional<const Symbol&>
-Parser::Result::get_symbol(std::string_view name) const {
+Object::get_symbol(std::string_view name) const {
     if (const auto it = std::ranges::find(symbols, name, &Symbol::name); it != symbols.end()) {
         return *it;
     }
@@ -32,7 +32,7 @@ Parser::Result::get_symbol(std::string_view name) const {
     return std::nullopt;
 }
 
-std::expected<Parser::Result, std::string>
+std::expected<Object, std::string>
 Parser::parse(const std::filesystem::path& path) {
     std::ifstream stream(path, std::ios::binary);
     if (!stream.is_open()) {
@@ -42,7 +42,7 @@ Parser::parse(const std::filesystem::path& path) {
     return parse(stream);
 }
 
-std::expected<Parser::Result, std::string>
+std::expected<Object, std::string>
 Parser::parse(std::ifstream& stream) {
     Parser parser(stream);
 
@@ -56,8 +56,8 @@ Parser::parse(std::ifstream& stream) {
         .and_then(std::bind_front(&Parser::check_relocations, &parser))
         .transform([&]() {
             Console::success("Parsed {} functions and {} relocations",
-                parser.mResult.revo_functions.size(), parser.mResult.revo_relocations.size());
-            return std::move(parser.mResult);
+                parser.mObject.revo_functions.size(), parser.mObject.revo_relocations.size());
+            return std::move(parser.mObject);
         });
 }
 
@@ -68,28 +68,28 @@ Parser::read_elf_header() {
     constexpr auto EI_CLASS{4uz};
     constexpr auto ELFCLASS32{1uz};
 
-    if (!mStream.read(reinterpret_cast<char*>(&mResult.elf_header), sizeof(mResult.elf_header))) {
+    if (!mStream.read(reinterpret_cast<char*>(&mObject.elf_header), sizeof(mObject.elf_header))) {
         return std::unexpected("reached EOF whilst interpreting header");
     }
 
-    if (!std::ranges::starts_with(mResult.elf_header.e_ident, ELF_MAGIC)) {
+    if (!std::ranges::starts_with(mObject.elf_header.e_ident, ELF_MAGIC)) {
         return std::unexpected(std::format( //
             "got ELF magic of 0x{:02X}{:02X}{:02X}{:02X} (expected 0x7F454C46)",
-            mResult.elf_header.e_ident[0], mResult.elf_header.e_ident[1],
-            mResult.elf_header.e_ident[2], mResult.elf_header.e_ident[3]));
+            mObject.elf_header.e_ident[0], mObject.elf_header.e_ident[1],
+            mObject.elf_header.e_ident[2], mObject.elf_header.e_ident[3]));
     }
 
-    Util::byteswap(mResult.elf_header);
+    Util::byteswap(mObject.elf_header);
 
-    if (mResult.elf_header.e_machine != EM_PPC) {
+    if (mObject.elf_header.e_machine != EM_PPC) {
         return std::unexpected(std::format(
-            "got e_machine value of {} (expected {})", mResult.elf_header.e_machine, EM_PPC));
+            "got e_machine value of {} (expected {})", mObject.elf_header.e_machine, EM_PPC));
     }
 
-    if (mResult.elf_header.e_ident[EI_CLASS] != ELFCLASS32) {
+    if (mObject.elf_header.e_ident[EI_CLASS] != ELFCLASS32) {
         return std::unexpected(std::format( //
             "got EI_CLASS value of {} (expected {}). Make sure your binary is 32-bit.",
-            mResult.elf_header.e_ident[EI_CLASS], ELFCLASS32));
+            mObject.elf_header.e_ident[EI_CLASS], ELFCLASS32));
     }
 
     return {};
@@ -99,10 +99,10 @@ std::expected<void, std::string>
 Parser::read_sections() {
     constexpr auto SHT_NOBITS{8uz};
 
-    mResult.sections.resize(mResult.elf_header.e_shnum);
+    mObject.sections.resize(mObject.elf_header.e_shnum);
 
-    mStream.seekg(mResult.elf_header.e_shoff);
-    for (auto [index, section] : Util::enumerate<SectionIndex>(mResult.sections)) {
+    mStream.seekg(mObject.elf_header.e_shoff);
+    for (auto [index, section] : Util::enumerate<SectionIndex>(mObject.sections)) {
         if (!mStream.read(reinterpret_cast<char*>(&section.header), sizeof(SectionHeader))) {
             return std::unexpected("reached EOF whilst reading section headers");
         }
@@ -111,7 +111,7 @@ Parser::read_sections() {
         section.index = index;
     }
 
-    for (auto& section : mResult.sections) {
+    for (auto& section : mObject.sections) {
         if (section.header.sh_type == SHT_NOBITS) {
             continue;
         }
@@ -131,24 +131,24 @@ Parser::read_section_names() {
     constexpr auto SHN_UNDEF{0uz};
     constexpr auto SHT_STRTAB{3uz};
 
-    if (mResult.elf_header.e_shstrndx == SHN_UNDEF) {
+    if (mObject.elf_header.e_shstrndx == SHN_UNDEF) {
         return std::unexpected(std::format( //
             "got string table index of {} (expected non-zero value)", SHN_UNDEF));
     }
 
-    if (mResult.elf_header.e_shstrndx >= mResult.sections.size()) {
+    if (mObject.elf_header.e_shstrndx >= mObject.sections.size()) {
         return std::unexpected(std::format( //
             "ELF header size ({}) and section header size ({}) do not match",
-            mResult.elf_header.e_shstrndx, mResult.sections.size()));
+            mObject.elf_header.e_shstrndx, mObject.sections.size()));
     }
 
-    const auto& strtab_section = mResult.sections[mResult.elf_header.e_shstrndx];
+    const auto& strtab_section = mObject.sections[mObject.elf_header.e_shstrndx];
     if (strtab_section.header.sh_type != SHT_STRTAB) {
         return std::unexpected(std::format("got SHT_STRTAB type flag of {} (expected {})",
             strtab_section.header.sh_type, SHT_STRTAB));
     }
 
-    for (auto& section : mResult.sections) {
+    for (auto& section : mObject.sections) {
         const auto name = read_string(strtab_section, section.header.sh_name);
         if (!name) {
             return std::unexpected(name.error());
@@ -165,7 +165,7 @@ Parser::read_symbols() {
     constexpr auto SHT_SYMTAB{2uz};
     constexpr auto SHT_STRTAB{3uz};
 
-    const auto symtab_section = mResult.get_section(".symtab");
+    const auto symtab_section = mObject.get_section(".symtab");
     if (!symtab_section) {
         return std::unexpected("failed to find section .symtab");
     }
@@ -177,13 +177,13 @@ Parser::read_symbols() {
     }
 
     const auto strtab_index = symtab_section->header.sh_link;
-    if (strtab_index >= mResult.sections.size()) {
+    if (strtab_index >= mObject.sections.size()) {
         return std::unexpected(std::format( //
             "section .symtab links to section {} (expected <{})", //
-            strtab_index, mResult.sections.size()));
+            strtab_index, mObject.sections.size()));
     }
 
-    const auto& strtab_section = mResult.sections[strtab_index];
+    const auto& strtab_section = mObject.sections[strtab_index];
     if (strtab_section.header.sh_type != SHT_STRTAB) {
         return std::unexpected(std::format( //
             "got SHT_STRTAB type flag of {} (expected {})", //
@@ -195,14 +195,14 @@ Parser::read_symbols() {
         return std::unexpected(headers.error());
     }
 
-    mResult.symbols.reserve(headers->size());
+    mObject.symbols.reserve(headers->size());
     for (const auto& header : *headers) {
         const auto name = read_string(strtab_section, header.st_name);
         if (!name) {
             return std::unexpected(name.error());
         }
 
-        mResult.symbols.push_back({//
+        mObject.symbols.push_back({//
             .header = header,
             .name = std::string{*name}});
     }
@@ -212,7 +212,7 @@ Parser::read_symbols() {
 
 std::expected<void, std::string>
 Parser::read_revo_relocations() {
-    const auto rela_section = mResult.get_section(".rela.revo_text");
+    const auto rela_section = mObject.get_section(".rela.revo_text");
     if (!rela_section) {
         Console::warning("No relocation section found, attempting parse anyway");
         return {};
@@ -223,7 +223,7 @@ Parser::read_revo_relocations() {
         return std::unexpected(relocations.error());
     }
 
-    mResult.revo_relocations = std::move(*relocations);
+    mObject.revo_relocations = std::move(*relocations);
     return {};
 }
 
@@ -231,12 +231,12 @@ std::expected<void, std::string>
 Parser::read_revo_functions() {
     constexpr auto STT_FUNC{2uz};
 
-    const auto input_section = mResult.get_section(".revo_text");
+    const auto input_section = mObject.get_section(".revo_text");
     if (!input_section) {
         return std::unexpected("failed to get section .revo_text");
     }
 
-    for (const auto& symbol : mResult.symbols) {
+    for (const auto& symbol : mObject.symbols) {
         if (symbol.header.st_shndx != input_section->index) {
             continue;
         }
@@ -276,7 +276,7 @@ Parser::read_revo_functions() {
 
         std::flat_map<u32, std::vector<Rela>> relocations;
 
-        for (const auto& relocation : mResult.revo_relocations) {
+        for (const auto& relocation : mObject.revo_relocations) {
             if (!symbol.contains(relocation.r_offset)) {
                 continue;
             }
@@ -286,7 +286,7 @@ Parser::read_revo_functions() {
                 relocation.r_offset, symbol.header.st_value);
         }
 
-        mResult.revo_functions.push_back({//
+        mObject.revo_functions.push_back({//
             .instructions = std::move(instructions),
             .relocations = std::move(relocations),
             .offset = symbol.header.st_value,
@@ -298,9 +298,9 @@ Parser::read_revo_functions() {
 
 std::expected<void, std::string>
 Parser::check_functions() {
-    std::ranges::sort(mResult.revo_functions, {}, &Function::offset);
+    std::ranges::sort(mObject.revo_functions, {}, &Function::offset);
 
-    for (const auto& [previous, next] : std::views::pairwise(mResult.revo_functions)) {
+    for (const auto& [previous, next] : std::views::pairwise(mObject.revo_functions)) {
         if (previous.offset + previous.size > next.offset) {
             return std::unexpected(std::format( //
                 "function {:#x} (size of {:#x}) overlaps with function {:#x}", //
@@ -313,11 +313,11 @@ Parser::check_functions() {
 
 std::expected<void, std::string>
 Parser::check_relocations() const {
-    for (const auto& relocation : mResult.revo_relocations) {
+    for (const auto& relocation : mObject.revo_relocations) {
         const auto it = std::ranges::upper_bound(
-            mResult.revo_functions, relocation.r_offset, {}, &Function::offset);
+            mObject.revo_functions, relocation.r_offset, {}, &Function::offset);
 
-        if (it == mResult.revo_functions.begin() || !std::prev(it)->contains(relocation.r_offset)) {
+        if (it == mObject.revo_functions.begin() || !std::prev(it)->contains(relocation.r_offset)) {
             return std::unexpected(std::format(
                 "relocation {:#x} isn't referenced by a function", relocation.r_offset));
         }
