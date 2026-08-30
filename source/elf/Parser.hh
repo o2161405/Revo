@@ -4,60 +4,53 @@
 
 #include <expected>
 #include <filesystem>
-#include <fstream>
-#include <optional>
+#include <istream>
 #include <string>
 #include <string_view>
 #include <vector>
 
 namespace Revo::ELF {
 
-class Parser {
-public:
-    [[nodiscard]] static std::expected<Object, std::string>
-    parse(const std::filesystem::path& path);
+[[nodiscard]] std::expected<Object, std::string>
+parse(const std::filesystem::path& path);
 
-    [[nodiscard]] static std::expected<Object, std::string>
-    parse(std::ifstream& stream);
+[[nodiscard]] std::expected<Object, std::string>
+parse(std::istream& stream);
 
-private:
-    explicit Parser(std::ifstream& stream) : mStream(stream) {}
+namespace Impl {
 
-    // Parsing steps
-    [[nodiscard]] std::expected<void, std::string>
-    read_elf_header();
+[[nodiscard]] std::expected<void, std::string>
+read_elf_header(Object&, std::istream&);
 
-    [[nodiscard]] std::expected<void, std::string>
-    read_sections();
+[[nodiscard]] std::expected<void, std::string>
+read_sections(Object&, std::istream&);
 
-    [[nodiscard]] std::expected<void, std::string>
-    read_section_names();
+[[nodiscard]] std::expected<void, std::string>
+read_section_names(Object&);
 
-    [[nodiscard]] std::expected<void, std::string>
-    read_symbols();
+[[nodiscard]] std::expected<void, std::string>
+read_symbols(Object&);
 
-    [[nodiscard]] std::expected<void, std::string>
-    read_revo_relocations();
+[[nodiscard]] std::expected<void, std::string>
+read_revo_relocations(Object&);
 
-    [[nodiscard]] std::expected<void, std::string>
-    read_revo_functions();
+[[nodiscard]] std::expected<void, std::string>
+read_revo_functions(Object&);
 
-    [[nodiscard]] std::expected<void, std::string>
-    check_functions();
+[[nodiscard]] std::expected<void, std::string>
+check_functions(Object&);
 
-    [[nodiscard]] std::expected<void, std::string>
-    check_relocations() const;
+[[nodiscard]] std::expected<void, std::string>
+check_relocations(const Object&);
 
-    // Utility functions
-    template <typename TType>
-    [[nodiscard]] static std::expected<std::vector<TType>, std::string>
-    read_table(const Section& section);
+[[nodiscard]] std::expected<std::string_view, std::string>
+read_string(const Section& section, u32 offset);
 
-    [[nodiscard]] static std::expected<std::string_view, std::string>
-    read_string(const Section& section, u32 offset);
+// see comment in .cc file about why the definition isn't here
+template <typename TType>
+[[nodiscard]] std::expected<std::vector<TType>, std::string>
+read_table(const Section& section);
 
-    Object mObject;
-    std::ifstream& mStream;
-};
+} // namespace Impl
 
 } // namespace Revo::ELF

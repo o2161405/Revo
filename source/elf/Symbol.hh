@@ -1,5 +1,7 @@
 #pragma once
 
+#include "elf/Types.hh"
+
 namespace Revo::ELF {
 
 #pragma pack(push, 1)

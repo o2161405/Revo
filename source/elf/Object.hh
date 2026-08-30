@@ -4,6 +4,8 @@
 #include "elf/Symbol.hh"
 #include "elf/Types.hh"
 
+#include <optional>
+#include <string_view>
 #include <vector>
 
 namespace Revo::ELF {

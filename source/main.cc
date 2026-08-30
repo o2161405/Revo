@@ -7,20 +7,15 @@
 #include <contracts>
 #include <cstdlib>
 
+using namespace Revo;
+
 void
 handle_contract_violation(const std::contracts::contract_violation& violation) {
     const auto location = violation.location();
-    Revo::Console::error("Contract violation at {}:{} - {}", //
+    Console::error("Contract violation at {}:{} - {}", //
         location.file_name(), location.line(), violation.comment());
     std::abort();
 }
-
-// definitely a good todo somewhat soon:
-// put Decoder in Revo::Decode, and then static functions like Decoder::decode
-// and Parser::parse should be free functions so it's called like ELF::parse
-// instead of ELF::Parser::parse. also get rid of Decoder::Result
-
-using namespace Revo;
 
 int
 main(int argc, const char* const* argv) {
@@ -46,7 +41,7 @@ main(int argc, const char* const* argv) {
 
     auto input_file = cli->get<CLI::Argument::Type::Input>();
 
-    auto parse = ELF::Parser::parse(*input_file);
+    auto parse = ELF::parse(*input_file);
     if (!parse) {
         Console::error("Failed to parse ELF file: {}", parse.error());
         return 1;
