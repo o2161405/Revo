@@ -15,7 +15,7 @@ template <typename... TFields>
 struct Layout {
     static constexpr u32 bits = (0u + ... + TFields::bits);
     static constexpr u32 mask = (0u | ... | (TFields::mask << TFields::shift));
-    static constexpr std::array fields{^^TFields...};
+    static constexpr auto fields = std::array{^^TFields...};
     static constexpr bool has_extended_opcode = (false || ... || IsExtendedOpcodeField<TFields>);
 
     static_assert(bits <= INSTRUCTION_WIDTH,

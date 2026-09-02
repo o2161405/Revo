@@ -12,6 +12,8 @@
 
 namespace Revo::Decode {
 
+using namespace PPC;
+
 namespace {
 
 template <typename TSpecification, typename TField>
@@ -101,23 +103,23 @@ parse(u32 raw, u32 address) {
     template for (constexpr auto enumerator :
         std::define_static_array(std::meta::enumerators_of(^^Mnemonic))) {
         constexpr auto mnemonic = [:enumerator:];
-        using Specification = InstructionSpecification<mnemonic>;
+        using TSpecification = InstructionSpecification<mnemonic>;
 
-        if (opcd != Specification::opcd) {
+        if (opcd != TSpecification::opcd) {
             continue;
         }
 
-        if (!matches_constants<Specification>(raw)) {
+        if (!matches_constants<TSpecification>(raw)) {
             continue;
         }
 
-        using TLayout = [:Specification::layout:];
+        using TLayout = [:TSpecification::layout:];
         if constexpr (TLayout::has_extended_opcode) {
-            static_assert(HasExtendedOpcode<Specification>,
+            static_assert(HasExtendedOpcode<TSpecification>,
                 "Layout has an extended opcode but the instruction specification doesn't "
                 "provide the required fields");
 
-            if (TLayout::extended_opcode(raw) != Specification::xo) {
+            if (TLayout::extended_opcode(raw) != TSpecification::xo) {
                 continue;
             }
         }

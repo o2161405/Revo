@@ -12,39 +12,35 @@
 
 namespace Revo::CFG {
 
-class Builder {
-public:
-    [[nodiscard]] static std::expected<Graph, std::string>
-    build(std::span<const Decode::Function> functions);
+[[nodiscard]] std::expected<Graph, std::string>
+build(std::span<const Decode::Function> functions);
 
-private:
-    Builder() = default;
+namespace Impl {
 
-    // Building steps
-    [[nodiscard]] std::expected<void, std::string>
-    mark_leaders(std::span<const Decode::Function> functions);
+// Building steps
+[[nodiscard]] std::expected<std::flat_set<u32>, std::string>
+mark_leaders(std::span<const Decode::Function> functions);
 
-    [[nodiscard]] std::expected<void, std::string>
-    construct_blocks(std::span<const Decode::Function> functions);
+[[nodiscard]] std::expected<void, std::string>
+construct_blocks(Graph& graph, std::span<const Decode::Function> functions, //
+    const std::flat_set<u32>& leaders);
 
-    [[nodiscard]] std::expected<void, std::string>
-    construct_edges();
+[[nodiscard]] std::expected<void, std::string>
+construct_edges(Graph& graph);
 
-    [[nodiscard]] std::expected<void, std::string>
-    check_returns();
+[[nodiscard]] std::expected<void, std::string>
+check_returns(const Graph& graph);
 
-    [[nodiscard]] std::expected<void, std::string>
-    check_unreachable();
+[[nodiscard]] std::expected<void, std::string>
+check_unreachable(const Graph& graph);
 
-    // Utility functions
-    [[nodiscard]] std::flat_map<BlockId, LinkContext>
-    merge_contexts(const Function& function) const;
+// Utility functions
+[[nodiscard]] std::flat_map<BlockId, LinkContext>
+merge_contexts(const Graph& graph, const Function& function);
 
-    static void
-    apply_link(LinkContext& context, const Decode::Instruction& instruction);
+void
+apply_link(LinkContext& context, const Decode::Instruction& instruction);
 
-    Graph mGraph;
-    std::flat_set<u32> mLeaders;
-};
+} // namespace Impl
 
 } // namespace Revo::CFG

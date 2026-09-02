@@ -1,6 +1,4 @@
 #include "cfg/Builder.hh"
-#include "cli/Argument.hh"
-#include "cli/Parser.hh"
 #include "decode/Decoder.hh"
 #include "elf/Parser.hh"
 
@@ -18,30 +16,10 @@ handle_contract_violation(const std::contracts::contract_violation& violation) {
 }
 
 int
-main(int argc, const char* const* argv) {
-    auto cli = CLI::Parser::parse(argc, argv);
-    if (!cli) {
-        Console::error("{}", cli.error());
-        CLI::Parser::print_usage();
-        return 1;
-    }
+main() {
+    Console::set(Console::LogLevel::Debug);
 
-    if (cli->contains(CLI::Argument::Type::Help)) {
-        CLI::Parser::print_usage();
-        return 0;
-    }
-
-    auto log_level = cli->get<CLI::Argument::Type::Console>();
-    if (log_level) {
-        Console::set(*log_level);
-    }
-    else {
-        Console::set(Console::LogLevel::Info);
-    }
-
-    auto input_file = cli->get<CLI::Argument::Type::Input>();
-
-    auto object = ELF::parse(*input_file);
+    auto object = ELF::parse("input.elf");
     if (!object) {
         Console::error("Failed to parse ELF file: {}", object.error());
         return 1;
@@ -53,7 +31,7 @@ main(int argc, const char* const* argv) {
         return 1;
     }
 
-    auto graph = CFG::Builder::build(*functions);
+    auto graph = CFG::build(*functions);
     if (!graph) {
         Console::error("Failed to build CFG: {}", graph.error());
         return 1;
