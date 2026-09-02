@@ -1,15 +1,18 @@
 #include "Decoder.hh"
 
 #include "ppc/Concepts.hh"
-#include "ppc/Layout.hh"
+#include "ppc/Form.hh"
+#include "ppc/InstructionSpecification.hh"
 #include "util/Util.hh"
 
 #include <algorithm>
 #include <meta>
 
-namespace Revo {
+// todo: find better names for parse and make_instruction because they are awful
 
-using namespace Revo::PPC;
+namespace Revo::Decode {
+
+using namespace PPC;
 
 namespace {
 
@@ -33,120 +36,139 @@ operand_access() {
     }
 }
 
-} // namespace
-
-std::expected<Decoder::Result, std::string>
-Decoder::decode(std::span<const ELF::Function> functions) {
-    Decoder::Result result;
-
-    for (const auto& function : functions) {
-        std::vector<Decode::Instruction> instructions;
-        instructions.reserve(function.instructions.size());
-
-        for (auto [index, raw] : Util::enumerate<u32>(function.instructions)) {
-            const auto address = function.offset + index * INSTRUCTION_SIZE;
-
-            auto decoded = parse(Instruction{raw}, address);
-            if (!decoded) {
-                return std::unexpected(decoded.error());
+template <typename TSpecification>
+[[nodiscard]] constexpr bool
+matches_constants(u32 raw) {
+    if constexpr (HasConstants<TSpecification>) {
+        template for (constexpr auto constant : TSpecification::constants) {
+            using TField = [:constant.field:];
+            if (TField::get(raw) != constant.value) {
+                return false;
             }
-
-            instructions.push_back(*decoded);
         }
-
-        result.functions.push_back({//
-            .instructions = std::move(instructions),
-            .relocations = function.relocations,
-            .offset = function.offset,
-            .size = function.size});
     }
 
-    Console::success("Decoded {} functions", result.functions.size());
+    return true;
+}
+
+} // namespace
+
+std::expected<std::vector<Function>, std::string>
+decode(std::span<const ELF::Function> functions) {
+    std::vector<Function> result;
+    result.reserve(functions.size());
+
+    for (const auto& function : functions) {
+        auto decoded = Impl::decode_function(function);
+        if (!decoded) {
+            return std::unexpected(decoded.error());
+        }
+
+        result.push_back(std::move(*decoded));
+    }
+
+    Console::success("Decoded {} functions", result.size());
     return result;
 }
 
-std::expected<Decode::Instruction, std::string>
-Decoder::parse(Instruction instruction, u32 address) {
-    const auto opcd = instruction.get<Layout::OPCD>();
-    std::optional<u32> xo;
+namespace Impl {
+
+std::expected<Function, std::string>
+decode_function(const ELF::Function& function) {
+    std::vector<Instruction> instructions;
+    instructions.reserve(function.instructions.size());
+
+    for (auto [index, raw] : Util::enumerate<u32>(function.instructions)) {
+        const auto address = function.offset + index * INSTRUCTION_SIZE;
+
+        auto decoded = parse(raw, address);
+        if (!decoded) {
+            return std::unexpected(decoded.error());
+        }
+
+        instructions.push_back(*decoded);
+    }
+
+    return Function{//
+        .instructions = std::move(instructions),
+        .relocations = function.relocations,
+        .offset = function.offset,
+        .size = function.size};
+}
+
+std::expected<Instruction, std::string>
+parse(u32 raw, u32 address) {
+    const auto opcd = Form::OPCD::get(raw);
 
     template for (constexpr auto enumerator :
         std::define_static_array(std::meta::enumerators_of(^^Mnemonic))) {
         constexpr auto mnemonic = [:enumerator:];
-        using Specification = InstructionSpecification<mnemonic>;
+        using TSpecification = InstructionSpecification<mnemonic>;
 
-        if (opcd != Specification::opcd) {
+        if (opcd != TSpecification::opcd) {
             continue;
         }
 
-        if (!instruction.valid<Specification>()) {
+        if (!matches_constants<TSpecification>(raw)) {
             continue;
         }
 
-        using Layout = [:Specification::layout:];
-        if constexpr (Layout::has_extended_opcode) {
-            static_assert(HasExtendedOpcode<Specification>,
+        using TLayout = [:TSpecification::layout:];
+        if constexpr (TLayout::has_extended_opcode) {
+            static_assert(HasExtendedOpcode<TSpecification>,
                 "Layout has an extended opcode but the instruction specification doesn't "
                 "provide the required fields");
 
-            xo = instruction.extended_opcode<Layout>();
-            if (xo != Specification::xo) {
+            if (TLayout::extended_opcode(raw) != TSpecification::xo) {
                 continue;
             }
         }
 
-        if (instruction.uses_reserved_bits<Layout>()) {
-            return std::unexpected(
-                std::format("reserved bits set ({:#010x}) at {:#x}", instruction.raw(), address));
+        if (TLayout::uses_reserved_bits(raw)) {
+            return std::unexpected(std::format( //
+                "reserved bits set ({:#010x}) at {:#x}", raw, address));
         }
 
-        return make_instruction<mnemonic>(instruction, address);
+        return make_instruction<mnemonic>(raw, address);
     }
 
-    if (xo) {
-        return std::unexpected(
-            std::format("unimplemented opcode ({}, xo {}) at {:#x}", opcd, *xo, address));
-    }
-
-    return std::unexpected(std::format("unimplemented opcode ({}) at {:#x}", opcd, address));
+    return std::unexpected(std::format("unimplemented instruction at {:#x}", address));
 }
 
-template <Mnemonic TMnemonic>
-[[nodiscard]] constexpr Decode::Instruction
-Decoder::make_instruction(Instruction instruction, u32 address) {
-    using Specification = InstructionSpecification<TMnemonic>;
+template <PPC::Mnemonic TMnemonic>
+constexpr Instruction
+make_instruction(u32 raw, u32 address) {
+    using TSpecification = InstructionSpecification<TMnemonic>;
+    using TLayout = [:TSpecification::layout:];
 
-    static constexpr auto fields = std::define_static_array(
-        std::meta::template_arguments_of(std::meta::dealias(Specification::layout)));
-
-    if constexpr (HasZeroableField<Specification>) {
-        static_assert(
-            std::ranges::contains(fields, std::meta::dealias(Specification::zeroable_field)),
+    if constexpr (HasZeroableField<TSpecification>) {
+        static_assert(std::ranges::contains(
+                          TLayout::fields, std::meta::dealias(TSpecification::zeroable_field)),
             "Zeroable_field references a field that isn't in the instruction's layout");
     }
 
-    if constexpr (HasAccesses<Specification>) {
-        template for (constexpr auto entry : Specification::accesses) {
-            static_assert(std::ranges::contains(fields, std::meta::dealias(entry.field)),
+    if constexpr (HasAccesses<TSpecification>) {
+        template for (constexpr auto entry : TSpecification::accesses) {
+            static_assert(std::ranges::contains(TLayout::fields, std::meta::dealias(entry.field)),
                 "Accesses references a field that isn't in the instruction's layout");
         }
     }
 
     Decode::Instruction decoded_instruction{.mnemonic = TMnemonic, .address = address};
 
-    template for (constexpr auto field : fields) {
+    template for (constexpr auto field : TLayout::fields) {
         using TField = [:field:];
 
         if constexpr (IsOperandField<TField>) {
-            constexpr auto access = operand_access<Specification, TField>();
+            constexpr auto access = operand_access<TSpecification, TField>();
 
             if constexpr (IsRegisterField<TField>) {
                 static_assert(access != Operand::Access::None,
                     "A register field is missing from the specification's accesses list");
             }
 
-            const auto value = instruction.get<TField>();
-            if (IsZeroableField<Specification, TField> && value == 0) {
+            const auto value = TField::get(raw);
+            if (IsZeroableField<TSpecification, TField> && value == 0) {
                 decoded_instruction.operands.push_back(Operand{.value = Operand::Immediate{0}});
             }
             else {
@@ -154,24 +176,24 @@ Decoder::make_instruction(Instruction instruction, u32 address) {
             }
         }
         else if constexpr (IsBehaviorField<TField>) {
-            if constexpr (HasImpliedBehaviors<Specification>) {
-                static_assert((TField::behavior & Specification::implied_behaviors) ==
+            if constexpr (HasImpliedBehaviors<TSpecification>) {
+                static_assert((TField::behavior & TSpecification::implied_behaviors) ==
                         Operand::Behavior::None,
                     "Operand and implied behaviour share one or more flags");
             }
 
-            if (instruction.get<TField>() != 0) {
+            if (TField::get(raw) != 0) {
                 decoded_instruction.behaviors |= TField::behavior;
             }
         }
     }
 
-    if constexpr (HasImpliedBehaviors<Specification>) {
-        decoded_instruction.behaviors |= Specification::implied_behaviors;
+    if constexpr (HasImpliedBehaviors<TSpecification>) {
+        decoded_instruction.behaviors |= TSpecification::implied_behaviors;
     }
 
-    if constexpr (HasIndirectBranchSource<Specification>) {
-        decoded_instruction.indirect_branch_source = Specification::indirect_branch_source;
+    if constexpr (HasIndirectBranchSource<TSpecification>) {
+        decoded_instruction.indirect_branch_source = TSpecification::indirect_branch_source;
     }
 
     if ((decoded_instruction.behaviors & Operand::Behavior::Absolute) == Operand::Behavior::None) {
@@ -185,4 +207,6 @@ Decoder::make_instruction(Instruction instruction, u32 address) {
     return decoded_instruction;
 }
 
-} // namespace Revo
+} // namespace Impl
+
+} // namespace Revo::Decode

@@ -1,79 +1,59 @@
 #pragma once
 
-#include "elf/Section.hh"
-#include "elf/Symbol.hh"
-#include "elf/Types.hh"
+#include "elf/Object.hh"
 
 #include <expected>
 #include <filesystem>
-#include <fstream>
-#include <optional>
+#include <istream>
 #include <string>
 #include <string_view>
 #include <vector>
 
 namespace Revo::ELF {
 
-class Parser {
-public:
-    struct Result {
-        ELFHeader elf_header{};
-        std::vector<Section> sections;
-        std::vector<Symbol> symbols;
-        std::vector<Rela> revo_relocations;
-        std::vector<Function> revo_functions;
+[[nodiscard]] std::expected<Object, std::string>
+parse(const std::filesystem::path& path);
 
-        [[nodiscard]] std::optional<const Section&>
-        get_section(std::string_view name) const;
+[[nodiscard]] std::expected<Object, std::string>
+parse(std::istream& stream);
 
-        [[nodiscard]] std::optional<const Symbol&>
-        get_symbol(std::string_view name) const;
-    };
+namespace Impl {
 
-    [[nodiscard]] static std::expected<Result, std::string>
-    parse(const std::filesystem::path& path);
+// Parsing steps
+[[nodiscard]] std::expected<void, std::string>
+read_elf_header(Object& object, std::istream& stream);
 
-    [[nodiscard]] static std::expected<Result, std::string>
-    parse(std::ifstream& stream);
+[[nodiscard]] std::expected<void, std::string>
+read_sections(Object& object, std::istream& stream);
 
-private:
-    explicit Parser(std::ifstream& stream) : mStream(stream) {}
+[[nodiscard]] std::expected<void, std::string>
+read_section_names(Object& object);
 
-    // Parsing steps
-    [[nodiscard]] std::expected<void, std::string>
-    read_elf_header();
+[[nodiscard]] std::expected<void, std::string>
+read_symbols(Object& object);
 
-    [[nodiscard]] std::expected<void, std::string>
-    read_sections();
+[[nodiscard]] std::expected<void, std::string>
+read_revo_relocations(Object& object);
 
-    [[nodiscard]] std::expected<void, std::string>
-    read_section_names();
+[[nodiscard]] std::expected<void, std::string>
+read_revo_functions(Object& object);
 
-    [[nodiscard]] std::expected<void, std::string>
-    read_symbols();
+[[nodiscard]] std::expected<void, std::string>
+check_functions(const Object& object)
+    pre(std::ranges::is_sorted(object.revo_functions, {}, &Function::offset));
 
-    [[nodiscard]] std::expected<void, std::string>
-    read_revo_relocations();
+[[nodiscard]] std::expected<void, std::string>
+check_relocations(const Object& object)
+    pre(std::ranges::is_sorted(object.revo_functions, {}, &Function::offset));
 
-    [[nodiscard]] std::expected<void, std::string>
-    read_revo_functions();
+// Utility functions
+[[nodiscard]] std::expected<std::string_view, std::string>
+read_string(const Section& section, u32 offset);
 
-    [[nodiscard]] std::expected<void, std::string>
-    check_functions();
+template <typename TType>
+[[nodiscard]] std::expected<std::vector<TType>, std::string>
+read_table(const Section& section);
 
-    [[nodiscard]] std::expected<void, std::string>
-    check_relocations() const;
-
-    // Utility functions
-    template <typename TType>
-    [[nodiscard]] static std::expected<std::vector<TType>, std::string>
-    read_table(const Section& section);
-
-    [[nodiscard]] static std::expected<std::string_view, std::string>
-    read_string(const Section& section, u32 offset);
-
-    Result mResult;
-    std::ifstream& mStream;
-};
+} // namespace Impl
 
 } // namespace Revo::ELF

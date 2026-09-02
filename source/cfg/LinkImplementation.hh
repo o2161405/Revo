@@ -12,6 +12,7 @@ struct BaseLinkImplementation {
             if (operand.is<PPC::Register::GPR>() &&
                 (operand.access & PPC::Operand::Access::Write) != PPC::Operand::Access::None) {
                 context.set_lr(operand, false);
+
                 if (operand.is(PPC::Register::GPR::r1)) {
                     context.reset_sp();
                 }
