@@ -8,11 +8,19 @@
 namespace Revo::PPC {
 
 struct Operand {
-    /* clang-format off */
-    struct Immediate { s32 value; };
-    struct BranchDestination { u32 address; };
-    struct BranchOptions { u8 value; };
+    struct Immediate {
+        s32 value;
+    };
 
+    struct BranchDestination {
+        u32 address;
+    };
+
+    struct BranchOptions {
+        u8 value;
+    };
+
+    /* clang-format off */
     enum class Access : u8 { //
         None      = 0,
         Read      = 1 << 0,

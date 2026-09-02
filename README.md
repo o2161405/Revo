@@ -52,9 +52,9 @@ In your Makefile, add `-q` to your `LDFLAGS`.
 -ffunction-sections -fno-jump-tables -fno-optimize-sibling-calls -fno-exceptions -fno-rtti -fno-devirtualize
 ```
 
-Then compile your program normally and simply invoke Revo with your file:
+Then compile your program normally and run Revo with your `input.elf` file in the same directory:
 ```bash
-./Revo --input example.elf
+./Revo
 ```
 
 ## Contributing

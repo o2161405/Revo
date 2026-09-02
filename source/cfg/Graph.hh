@@ -40,16 +40,6 @@ struct Function {
     contains(BlockId id) const {
         return id >= first && id < last;
     }
-
-    [[nodiscard]] constexpr std::size_t
-    size() const {
-        return last - first;
-    }
-
-    [[nodiscard]] constexpr auto
-    ids() const {
-        return std::views::iota(first, last);
-    }
 };
 
 struct Edge {
