@@ -66,7 +66,7 @@ mark_leaders(std::span<const Decode::Function> functions) {
                 instruction_terminator == Terminator::Return) {
                 const auto next_address = instruction.address + PPC::INSTRUCTION_SIZE;
 
-                if (next_address < function.offset + function.size) {
+                if (function.contains(next_address)) {
                     leaders.insert(next_address);
                 }
             }
@@ -84,8 +84,8 @@ construct_blocks(Graph& graph, std::span<const Decode::Function> functions,
         return !leaders.contains(next.address);
     };
 
-    const auto make_block = [](auto chunk) { //
-        return Block{.instructions = chunk};
+    const auto make_block = [](auto instructions) { //
+        return Block{.instructions = instructions};
     };
 
     for (const auto& function : functions) {

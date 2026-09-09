@@ -1,5 +1,6 @@
 #pragma once
 
+#include "elf/Constants.hh"
 #include "elf/Types.hh"
 
 #include <cstddef>
@@ -47,6 +48,21 @@ struct Section {
         }
 
         return std::span{data}.subspan(offset, size);
+    }
+
+    [[nodiscard]] constexpr bool
+    is_nobits() const {
+        return header.sh_type == SHT_NOBITS;
+    }
+
+    [[nodiscard]] constexpr bool
+    is_allocated() const {
+        return header.sh_flags & SHF_ALLOC;
+    }
+
+    [[nodiscard]] constexpr bool
+    is_executable() const {
+        return header.sh_flags & SHF_EXECINSTR;
     }
 };
 

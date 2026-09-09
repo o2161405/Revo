@@ -4,7 +4,6 @@
 #include "ppc/InstructionSpecification.hh"
 #include "ppc/Mnemonic.hh"
 #include "ppc/Operand.hh"
-#include "util/Types.hh"
 
 #include <flat_map>
 #include <inplace_vector>
@@ -76,6 +75,16 @@ struct Function {
     std::flat_map<RelativeOffset, std::vector<ELF::Rela>> relocations;
     u32 offset;
     u32 size;
+
+    [[nodiscard]] constexpr u32
+    end() const {
+        return offset + size;
+    }
+
+    [[nodiscard]] constexpr bool
+    contains(u32 address) const {
+        return address >= offset && address < end();
+    }
 };
 
 } // namespace Revo::Decode

@@ -1,5 +1,6 @@
 #include "Parser.hh"
 
+#include "elf/Constants.hh"
 #include "elf/Symbol.hh"
 #include "ppc/Common.hh"
 #include "util/Util.hh"
@@ -35,7 +36,7 @@ parse(std::istream& stream) {
         .and_then([&] { return Impl::read_revo_relocations(object); })
         .and_then([&] { return Impl::read_revo_functions(object); })
         .transform([&] { std::ranges::sort(object.revo_functions, {}, &Function::offset); })
-        .and_then([&] { return Impl::check_functions(object); })
+        .and_then([&] { return Impl::check_overlaps(object); })
         .and_then([&] { return Impl::check_relocations(object); })
         .transform([&] {
             Console::success("Parsed {} functions and {} relocations", //
@@ -48,11 +49,6 @@ namespace Impl {
 
 std::expected<void, std::string>
 read_elf_header(Object& object, std::istream& stream) {
-    constexpr auto ELF_MAGIC = std::to_array<u8>({0x7F, 'E', 'L', 'F'});
-    constexpr auto EM_PPC{20uz};
-    constexpr auto EI_CLASS{4uz};
-    constexpr auto ELFCLASS32{1uz};
-
     if (!stream.read(reinterpret_cast<char*>(&object.elf_header), sizeof(object.elf_header))) {
         return std::unexpected("reached EOF whilst interpreting header");
     }
@@ -82,8 +78,6 @@ read_elf_header(Object& object, std::istream& stream) {
 
 std::expected<void, std::string>
 read_sections(Object& object, std::istream& stream) {
-    constexpr auto SHT_NOBITS{8uz};
-
     object.sections.resize(object.elf_header.e_shnum);
 
     stream.seekg(object.elf_header.e_shoff);
@@ -113,9 +107,6 @@ read_sections(Object& object, std::istream& stream) {
 
 std::expected<void, std::string>
 read_section_names(Object& object) {
-    constexpr auto SHN_UNDEF{0uz};
-    constexpr auto SHT_STRTAB{3uz};
-
     if (object.elf_header.e_shstrndx == SHN_UNDEF) {
         return std::unexpected(std::format( //
             "got string table index of {} (expected non-zero value)", SHN_UNDEF));
@@ -147,9 +138,6 @@ read_section_names(Object& object) {
 
 std::expected<void, std::string>
 read_symbols(Object& object) {
-    constexpr auto SHT_SYMTAB{2uz};
-    constexpr auto SHT_STRTAB{3uz};
-
     const auto symtab_section = object.get_section(".symtab");
     if (!symtab_section) {
         return std::unexpected("failed to find section .symtab");
@@ -214,8 +202,6 @@ read_revo_relocations(Object& object) {
 
 std::expected<void, std::string>
 read_revo_functions(Object& object) {
-    constexpr auto STT_FUNC{2uz};
-
     const auto input_section = object.get_section(".revo_text");
     if (!input_section) {
         return std::unexpected("failed to get section .revo_text");
@@ -282,9 +268,9 @@ read_revo_functions(Object& object) {
 }
 
 std::expected<void, std::string>
-check_functions(const Object& object) {
+check_overlaps(const Object& object) {
     for (const auto& [previous, next] : std::views::pairwise(object.revo_functions)) {
-        if (previous.offset + previous.size > next.offset) {
+        if (previous.overlaps(next)) {
             return std::unexpected(std::format( //
                 "function {:#x} (size of {:#x}) overlaps with function {:#x}", //
                 previous.offset, previous.size, next.offset));

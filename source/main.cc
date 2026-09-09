@@ -1,5 +1,6 @@
 #include "cfg/Builder.hh"
 #include "decode/Decoder.hh"
+#include "dol/Writer.hh"
 #include "elf/Parser.hh"
 
 #include <contracts>
@@ -34,6 +35,12 @@ main() {
     auto graph = CFG::build(*functions);
     if (!graph) {
         Console::error("Failed to build CFG: {}", graph.error());
+        return 1;
+    }
+
+    auto output = DOL::write("output.dol", *object);
+    if (!output) {
+        Console::error("Failed to write DOL file: {}", output.error());
         return 1;
     }
 

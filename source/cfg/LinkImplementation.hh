@@ -2,6 +2,7 @@
 
 #include "cfg/LinkContext.hh"
 #include "ppc/Mnemonic.hh"
+#include "util/Util.hh"
 
 namespace Revo::CFG {
 
@@ -110,13 +111,11 @@ template <>
 struct LinkImplementation<PPC::Mnemonic::STB> {
     static void
     apply(LinkContext& context, const Decode::Instruction& instruction) {
-        constexpr s32 ALIGNMENT = ~3;
-
         const auto [_, ra, d] = instruction.get_operands<3uz>();
 
         if (ra.is(PPC::Register::GPR::r1) && context.current_sp_offset) {
-            context.return_stack_offsets.erase(
-                (*d.immediate() + *context.current_sp_offset) & ALIGNMENT);
+            context.return_stack_offsets.erase(Util::align_down(
+                *d.immediate() + *context.current_sp_offset, LinkContext::STACK_SLOT_SIZE));
         }
     }
 };

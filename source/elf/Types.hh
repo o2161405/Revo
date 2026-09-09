@@ -53,9 +53,19 @@ struct Function {
     u32 offset;
     u32 size;
 
+    [[nodiscard]] constexpr u32
+    end() const {
+        return offset + size;
+    }
+
     [[nodiscard]] constexpr bool
     contains(u32 address) const {
-        return address >= offset && address < (offset + size);
+        return address >= offset && address < end();
+    }
+
+    [[nodiscard]] constexpr bool
+    overlaps(const Function& other) const {
+        return offset < other.end() && other.offset < end();
     }
 };
 

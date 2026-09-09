@@ -39,7 +39,7 @@ read_revo_relocations(Object& object);
 read_revo_functions(Object& object);
 
 [[nodiscard]] std::expected<void, std::string>
-check_functions(const Object& object)
+check_overlaps(const Object& object)
     pre(std::ranges::is_sorted(object.revo_functions, {}, &Function::offset));
 
 [[nodiscard]] std::expected<void, std::string>

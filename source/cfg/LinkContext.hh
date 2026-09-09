@@ -12,6 +12,8 @@ namespace Revo::CFG {
 
 struct LinkContext {
     static constexpr u32 CALL_VOLATILE{0b0001111111111001};
+    static constexpr s32 STACK_SLOT_SIZE{0x4};
+    static constexpr s32 LR_STACK_OFFSET{0x4};
 
     std::flat_set<s32> return_stack_offsets;
     std::optional<s32> current_sp_offset{0};
@@ -68,7 +70,7 @@ struct LinkContext {
         if (current_sp_offset) {
             return_stack_offsets.erase(return_stack_offsets.begin(), //
                 return_stack_offsets.lower_bound(*current_sp_offset));
-            return_stack_offsets.erase(*current_sp_offset + 4);
+            return_stack_offsets.erase(*current_sp_offset + LR_STACK_OFFSET);
         }
     }
 
