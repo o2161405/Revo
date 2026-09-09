@@ -60,17 +60,33 @@ read_elf_header(Object& object, std::istream& stream) {
             object.elf_header.e_ident[2], object.elf_header.e_ident[3]));
     }
 
+    if (object.elf_header.e_ident[EI_CLASS] != ELFCLASS32) {
+        return std::unexpected(std::format( //
+            "got EI_CLASS value of {} (expected {}). Make sure your binary "
+            "is a 32-bit PowerPC executable",
+            object.elf_header.e_ident[EI_CLASS], ELFCLASS32));
+    }
+
+    if (object.elf_header.e_ident[EI_DATA] != ELFDATA2MSB) {
+        return std::unexpected(std::format( //
+            "got EI_DATA value of {} (expected {}). Make sure your binary is big-endian",
+            object.elf_header.e_ident[EI_DATA], ELFDATA2MSB));
+    }
+
     Util::byteswap(object.elf_header);
 
     if (object.elf_header.e_machine != EM_PPC) {
-        return std::unexpected(std::format(
-            "got e_machine value of {} (expected {})", object.elf_header.e_machine, EM_PPC));
+        return std::unexpected(std::format( //
+            "got e_machine value of {} (expected {}). Make sure your binary "
+            "is a 32-bit PowerPC executable",
+            object.elf_header.e_machine, EM_PPC));
     }
 
-    if (object.elf_header.e_ident[EI_CLASS] != ELFCLASS32) {
+    if (object.elf_header.e_type != ET_EXEC) {
         return std::unexpected(std::format( //
-            "got EI_CLASS value of {} (expected {}). Make sure your binary is 32-bit.",
-            object.elf_header.e_ident[EI_CLASS], ELFCLASS32));
+            "got e_type value of {} (expected {}). Make sure your binary is a "
+            "fully linked executable and not a relocatable or shared object",
+            object.elf_header.e_type, ET_EXEC));
     }
 
     return {};
@@ -204,7 +220,13 @@ std::expected<void, std::string>
 read_revo_functions(Object& object) {
     const auto input_section = object.get_section(".revo_text");
     if (!input_section) {
-        return std::unexpected("failed to get section .revo_text");
+        return std::unexpected("failed to get .revo_text");
+    }
+
+    if (!input_section->is_executable()) {
+        return std::unexpected(
+            ".revo_text isn't flagged as executable. Make sure you've applied"
+            "VIRTUALIZE only to functions and not variables");
     }
 
     for (const auto& symbol : object.symbols) {

@@ -49,7 +49,6 @@ make_sections(Output& output, const ELF::Object& object) {
             | std::views::filter(&ELF::Section::is_allocated) //
             | std::views::filter(std::not_fn(is_empty))) {
         Section result{//
-            .data = {},
             .address = section.header.sh_addr,
             .size = section.header.sh_size,
             .type = section_type(section)};
@@ -60,10 +59,6 @@ make_sections(Output& output, const ELF::Object& object) {
         }
 
         output.sections.push_back(std::move(result));
-    }
-
-    if (output.sections.empty()) {
-        return std::unexpected("no loadable sections found");
     }
 
     return {};
@@ -105,7 +100,7 @@ merge_sections(Output& output) {
 
 std::expected<void, std::string>
 place_sections(Output& output) {
-    static constexpr u32 SECTIONS_START = Util::align_up(
+    constexpr u32 SECTIONS_START = Util::align_up(
         sizeof(DOLHeader) + WATERMARK.size(), Section::ALIGNMENT);
 
     auto text_sections = output.sections | std::views::filter(&Section::is_text);

@@ -39,7 +39,7 @@ struct Section {
         BSS,
     };
 
-    std::vector<std::span<const std::byte>> data;
+    std::vector<std::span<const std::byte>> data{};
     u32 address{};
     u32 size{};
     u32 offset{};

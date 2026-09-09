@@ -8,6 +8,11 @@ namespace Revo::ELF {
 inline constexpr auto ELF_MAGIC = std::to_array<u8>({0x7F, 'E', 'L', 'F'});
 inline constexpr auto EI_CLASS{4uz};
 inline constexpr u8 ELFCLASS32{0x1};
+inline constexpr auto EI_DATA{5uz};
+inline constexpr u8 ELFDATA2MSB{0x2};
+
+// e_type
+inline constexpr u16 ET_EXEC{0x2};
 
 // e_machine
 inline constexpr u16 EM_PPC{0x14};
