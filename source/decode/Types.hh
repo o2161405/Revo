@@ -1,11 +1,9 @@
 #pragma once
 
 #include "elf/Types.hh"
-#include "ppc/Instruction.hh"
 #include "ppc/InstructionSpecification.hh"
 #include "ppc/Mnemonic.hh"
 #include "ppc/Operand.hh"
-#include "util/Types.hh"
 
 #include <flat_map>
 #include <inplace_vector>
@@ -18,8 +16,6 @@
 
 namespace Revo::Decode {
 
-using namespace Revo::PPC;
-
 using RelativeOffset = u32;
 
 struct Instruction {
@@ -27,7 +23,7 @@ struct Instruction {
 
     [[nodiscard]] constexpr bool
     is_call() const {
-        return (behaviors & Operand::Behavior::Link) != Operand::Behavior::None;
+        return (behaviors & PPC::Operand::Behavior::Link) != PPC::Operand::Behavior::None;
     }
 
     [[nodiscard]] constexpr bool
@@ -35,7 +31,7 @@ struct Instruction {
         constexpr u8 ALWAYS{0b10100};
 
         for (const auto& operand : operands) {
-            if (const auto* ptr = std::get_if<Operand::BranchOptions>(&operand.value)) {
+            if (const auto* ptr = std::get_if<PPC::Operand::BranchOptions>(&operand.value)) {
                 return (ptr->value & ALWAYS) != ALWAYS;
             }
         }
@@ -46,7 +42,7 @@ struct Instruction {
     [[nodiscard]] constexpr std::optional<u32>
     branch_destination() const {
         for (const auto& operand : operands) {
-            if (const auto* ptr = std::get_if<Operand::BranchDestination>(&operand.value)) {
+            if (const auto* ptr = std::get_if<PPC::Operand::BranchDestination>(&operand.value)) {
                 return ptr->address;
             }
         }
@@ -54,23 +50,24 @@ struct Instruction {
         return std::nullopt;
     }
 
-    // setting the return type to auto crashes the compiler, dont think about it :)
+    // setting the return type to auto crashes gcc, it's fixed in trunk version
+    // https://godbolt.org/z/rcEehdEW8
     template <auto TAmount>
-    [[nodiscard]] constexpr std::array<Operand, TAmount>
+    [[nodiscard]] constexpr std::array<PPC::Operand, TAmount>
     get_operands() const pre(operands.size() >= TAmount) {
         static_assert(TAmount <= MAX_OPERANDS,
             "Invalid number of operands, make sure you're excluding non-operand fields from your "
             "operand amount");
-        std::array<Operand, TAmount> result{};
+        std::array<PPC::Operand, TAmount> result{};
         std::ranges::copy_n(operands.begin(), TAmount, result.begin());
         return result;
     }
 
-    Mnemonic mnemonic;
+    PPC::Mnemonic mnemonic;
     u32 address;
-    std::inplace_vector<Operand, MAX_OPERANDS> operands{};
-    Operand::Behavior behaviors{};
-    std::optional<Register::SPR> indirect_branch_source{};
+    std::inplace_vector<PPC::Operand, MAX_OPERANDS> operands{};
+    PPC::Operand::Behavior behaviors{};
+    std::optional<PPC::Register::SPR> indirect_branch_source{};
 };
 
 struct Function {
@@ -78,6 +75,16 @@ struct Function {
     std::flat_map<RelativeOffset, std::vector<ELF::Rela>> relocations;
     u32 offset;
     u32 size;
+
+    [[nodiscard]] constexpr u32
+    end() const {
+        return offset + size;
+    }
+
+    [[nodiscard]] constexpr bool
+    contains(u32 address) const {
+        return address >= offset && address < end();
+    }
 };
 
 } // namespace Revo::Decode

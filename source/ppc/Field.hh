@@ -28,10 +28,22 @@ struct FieldConstant {
 
 template <u8 TStartIndex, u8 TEndIndex, typename TDataType>
 struct Field {
-    using data_type = TDataType;
     static constexpr u8 bits = TEndIndex - TStartIndex + 1;
     static constexpr u8 shift = INSTRUCTION_WIDTH - TEndIndex - 1;
     static constexpr u32 mask = (1ULL << bits) - 1;
+
+    [[nodiscard]] static constexpr TDataType
+    get(u32 raw) {
+        u32 field = (raw >> shift) & mask;
+
+        if constexpr (std::is_signed_v<TDataType>) {
+            constexpr u32 SHIFT = INSTRUCTION_WIDTH - bits;
+            return static_cast<TDataType>(static_cast<s32>(field << SHIFT) >> SHIFT);
+        }
+        else {
+            return static_cast<TDataType>(field);
+        }
+    }
 };
 
 template <u8 TStartIndex, u8 TEndIndex>

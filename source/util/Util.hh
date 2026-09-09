@@ -39,4 +39,14 @@ enumerate(TRange&& range) {
     return std::views::zip(std::views::iota(TType{0}), std::forward<TRange>(range));
 }
 
+[[nodiscard]] constexpr u32
+align_up(u32 value, u32 alignment) {
+    return (value + alignment - 1) & ~(alignment - 1);
+}
+
+[[nodiscard]] constexpr s32
+align_down(s32 value, s32 alignment) {
+    return value & ~(alignment - 1);
+}
+
 } // namespace Revo::Util
