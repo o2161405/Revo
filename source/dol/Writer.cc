@@ -69,7 +69,7 @@ check_overlaps(const Output& output) {
     for (const auto& [previous, next] : std::views::pairwise(output.sections)) {
         if (previous.overlaps(next)) {
             return std::unexpected(std::format( //
-                "section {:#x} (size of {:#x}) overlaps with section {:#x}", //
+                "section at {:#x} (size {:#x}) overlaps with section at {:#x}.", //
                 previous.address, previous.size, next.address));
         }
     }
@@ -107,12 +107,12 @@ place_sections(Output& output) {
     auto data_sections = output.sections | std::views::filter(&Section::is_data);
 
     if (std::ranges::distance(text_sections) > DOLHeader::MAX_TEXT_SECTIONS) {
-        return std::unexpected(std::format("{} text sections exceeds the maximum of {}",
+        return std::unexpected(std::format("got {} text sections (expected <={}).",
             std::ranges::distance(text_sections), DOLHeader::MAX_TEXT_SECTIONS));
     }
 
     if (std::ranges::distance(data_sections) > DOLHeader::MAX_DATA_SECTIONS) {
-        return std::unexpected(std::format("{} data sections exceeds the maximum of {}",
+        return std::unexpected(std::format("got {} data sections (expected <={}).",
             std::ranges::distance(data_sections), DOLHeader::MAX_DATA_SECTIONS));
     }
 
@@ -158,18 +158,18 @@ std::expected<void, std::string>
 write_file(const Output& output, const std::filesystem::path& path) {
     std::ofstream stream(path, std::ios::binary);
     if (!stream.is_open()) {
-        return std::unexpected("failed to open file");
+        return std::unexpected("failed to open file.");
     }
 
     auto header = output.header;
     Util::byteswap(header);
 
     if (!stream.write(reinterpret_cast<const char*>(&header), sizeof(header))) {
-        return std::unexpected("failed to write header");
+        return std::unexpected("failed to write header.");
     }
 
     if (!stream.write(WATERMARK.data(), WATERMARK.size())) {
-        return std::unexpected("failed to write watermark");
+        return std::unexpected("failed to write watermark.");
     }
 
     for (const auto& section : output.sections //
@@ -179,7 +179,7 @@ write_file(const Output& output, const std::filesystem::path& path) {
         for (const auto bytes : section.data) {
             if (!stream.write(reinterpret_cast<const char*>(bytes.data()), bytes.size())) {
                 return std::unexpected(std::format( //
-                    "failed to write section {:#x}", section.address));
+                    "failed to write section at {:#x}.", section.address));
             }
         }
     }

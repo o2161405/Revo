@@ -19,7 +19,7 @@ std::expected<Object, std::string>
 parse(const std::filesystem::path& path) {
     std::ifstream stream(path, std::ios::binary);
     if (!stream.is_open()) {
-        return std::unexpected("failed to open file");
+        return std::unexpected("failed to open file.");
     }
 
     return parse(stream);
@@ -50,26 +50,27 @@ namespace Impl {
 std::expected<void, std::string>
 read_elf_header(Object& object, std::istream& stream) {
     if (!stream.read(reinterpret_cast<char*>(&object.elf_header), sizeof(object.elf_header))) {
-        return std::unexpected("reached EOF whilst interpreting header");
+        return std::unexpected("reached EOF whilst reading the ELF header.");
     }
 
     if (!std::ranges::starts_with(object.elf_header.e_ident, ELF_MAGIC)) {
         return std::unexpected(std::format( //
-            "got ELF magic of 0x{:02X}{:02X}{:02X}{:02X} (expected 0x7F454C46)",
+            "got ELF magic of 0x{:02X}{:02X}{:02X}{:02X} (expected 0x7F454C46).",
             object.elf_header.e_ident[0], object.elf_header.e_ident[1],
             object.elf_header.e_ident[2], object.elf_header.e_ident[3]));
     }
 
     if (object.elf_header.e_ident[EI_CLASS] != ELFCLASS32) {
         return std::unexpected(std::format( //
-            "got EI_CLASS value of {} (expected {}). Make sure your binary "
-            "is a 32-bit PowerPC executable",
+            "got EI_CLASS value of {} (expected {}). "
+            "Make sure your binary is a 32-bit PowerPC executable.",
             object.elf_header.e_ident[EI_CLASS], ELFCLASS32));
     }
 
     if (object.elf_header.e_ident[EI_DATA] != ELFDATA2MSB) {
         return std::unexpected(std::format( //
-            "got EI_DATA value of {} (expected {}). Make sure your binary is big-endian",
+            "got EI_DATA value of {} (expected {}). "
+            "Make sure your binary is big-endian.",
             object.elf_header.e_ident[EI_DATA], ELFDATA2MSB));
     }
 
@@ -77,15 +78,15 @@ read_elf_header(Object& object, std::istream& stream) {
 
     if (object.elf_header.e_machine != EM_PPC) {
         return std::unexpected(std::format( //
-            "got e_machine value of {} (expected {}). Make sure your binary "
-            "is a 32-bit PowerPC executable",
+            "got e_machine value of {} (expected {}). "
+            "Make sure your binary is a 32-bit PowerPC executable.",
             object.elf_header.e_machine, EM_PPC));
     }
 
     if (object.elf_header.e_type != ET_EXEC) {
         return std::unexpected(std::format( //
-            "got e_type value of {} (expected {}). Make sure your binary is a "
-            "fully linked executable and not a relocatable or shared object",
+            "got e_type value of {} (expected {}). "
+            "Make sure your binary is an executable and not a relocatable or shared object.",
             object.elf_header.e_type, ET_EXEC));
     }
 
@@ -99,7 +100,7 @@ read_sections(Object& object, std::istream& stream) {
     stream.seekg(object.elf_header.e_shoff);
     for (auto [index, section] : Util::enumerate<SectionIndex>(object.sections)) {
         if (!stream.read(reinterpret_cast<char*>(&section.header), sizeof(SectionHeader))) {
-            return std::unexpected("reached EOF whilst reading section headers");
+            return std::unexpected("reached EOF whilst reading section headers.");
         }
 
         Util::byteswap(section.header);
@@ -114,7 +115,7 @@ read_sections(Object& object, std::istream& stream) {
         section.data.resize(section.header.sh_size);
         stream.seekg(section.header.sh_offset);
         if (!stream.read(reinterpret_cast<char*>(section.data.data()), section.header.sh_size)) {
-            return std::unexpected("reached EOF whilst reading section data");
+            return std::unexpected("reached EOF whilst reading section data.");
         }
     }
 
@@ -125,18 +126,19 @@ std::expected<void, std::string>
 read_section_names(Object& object) {
     if (object.elf_header.e_shstrndx == SHN_UNDEF) {
         return std::unexpected(std::format( //
-            "got string table index of {} (expected non-zero value)", SHN_UNDEF));
+            "got string table index of {} (expected non-zero value).", SHN_UNDEF));
     }
 
     if (object.elf_header.e_shstrndx >= object.sections.size()) {
         return std::unexpected(std::format( //
-            "ELF header size ({}) and section header size ({}) do not match",
+            "got string table index of {} (expected <{}).", //
             object.elf_header.e_shstrndx, object.sections.size()));
     }
 
     const auto& strtab_section = object.sections[object.elf_header.e_shstrndx];
     if (strtab_section.header.sh_type != SHT_STRTAB) {
-        return std::unexpected(std::format("got SHT_STRTAB type flag of {} (expected {})",
+        return std::unexpected(std::format( //
+            "got SHT_STRTAB type flag of {} (expected {}).", //
             strtab_section.header.sh_type, SHT_STRTAB));
     }
 
@@ -156,26 +158,28 @@ std::expected<void, std::string>
 read_symbols(Object& object) {
     const auto symtab_section = object.get_section(".symtab");
     if (!symtab_section) {
-        return std::unexpected("failed to find section .symtab");
+        return std::unexpected(
+            "failed to get section \".symtab\". "
+            "Make sure your binary isn't stripped of debug sections and symbols.");
     }
 
     if (symtab_section->header.sh_type != SHT_SYMTAB) {
         return std::unexpected(std::format( //
-            "got SHT_SYMTAB type flag of {} (expected {})", //
+            "got SHT_SYMTAB type flag of {} (expected {}).", //
             symtab_section->header.sh_type, SHT_SYMTAB));
     }
 
     const auto strtab_index = symtab_section->header.sh_link;
     if (strtab_index >= object.sections.size()) {
         return std::unexpected(std::format( //
-            "section .symtab links to section {} (expected <{})", //
+            "section \".symtab\" links to section {} (expected <{}).", //
             strtab_index, object.sections.size()));
     }
 
     const auto& strtab_section = object.sections[strtab_index];
     if (strtab_section.header.sh_type != SHT_STRTAB) {
         return std::unexpected(std::format( //
-            "got SHT_STRTAB type flag of {} (expected {})", //
+            "got SHT_STRTAB type flag of {} (expected {}).", //
             strtab_section.header.sh_type, SHT_STRTAB));
     }
 
@@ -191,9 +195,8 @@ read_symbols(Object& object) {
             return std::unexpected(name.error());
         }
 
-        object.symbols.push_back({//
-            .header = header,
-            .name = std::string{*name}});
+        auto& symbol = object.symbols.emplace_back(header);
+        symbol.name = *name;
     }
 
     return {};
@@ -203,7 +206,7 @@ std::expected<void, std::string>
 read_revo_relocations(Object& object) {
     const auto rela_section = object.get_section(".rela.revo_text");
     if (!rela_section) {
-        Console::warning("No relocation section found, attempting parse anyway");
+        Console::warning("No \".rela.revo_text\" section found");
         return {};
     }
 
@@ -218,49 +221,52 @@ read_revo_relocations(Object& object) {
 
 std::expected<void, std::string>
 read_revo_functions(Object& object) {
-    const auto input_section = object.get_section(".revo_text");
-    if (!input_section) {
-        return std::unexpected("failed to get .revo_text");
+    const auto revo_section = object.get_section(".revo_text");
+    if (!revo_section) {
+        return std::unexpected(
+            "failed to get section \".revo_text\". "
+            "Make sure you've marked input functions using VIRTUALIZE.");
     }
 
-    if (!input_section->is_executable()) {
+    if (!revo_section->is_executable()) {
         return std::unexpected(
-            ".revo_text isn't flagged as executable. Make sure you've applied"
-            "VIRTUALIZE only to functions and not variables");
+            "section \".revo_text\" isn't flagged as executable. "
+            "Make sure you've applied VIRTUALIZE only to functions.");
     }
 
     for (const auto& symbol : object.symbols) {
-        if (symbol.header.st_shndx != input_section->index) {
+        if (symbol.header.st_shndx != revo_section->index) {
             continue;
         }
 
         if (symbol.type() != STT_FUNC) {
-            Console::debug("Skipped symbol {:#x}: type {} (expected {})", //
+            Console::debug("Skipped symbol at {:#x} with type {} (expected {})", //
                 symbol.header.st_value, symbol.type(), STT_FUNC);
             continue;
         }
 
         if (symbol.header.st_value % PPC::INSTRUCTION_SIZE != 0) {
             return std::unexpected(std::format( //
-                "function {:#x} is not aligned to {} bytes", //
+                "function at {:#x} is not aligned to {} bytes.", //
                 symbol.header.st_value, PPC::INSTRUCTION_SIZE));
         }
 
         if (symbol.header.st_size == 0) {
             return std::unexpected(std::format( //
-                "function {:#x} has zero size", symbol.header.st_value));
+                "function at {:#x} has zero size.", symbol.header.st_value));
         }
 
         if (symbol.header.st_size % PPC::INSTRUCTION_SIZE != 0) {
             return std::unexpected(std::format( //
-                "function {:#x} (size of {}) is not a multiple of {} bytes", //
+                "function at {:#x} (size {}) is not a multiple of {} bytes.", //
                 symbol.header.st_value, symbol.header.st_size, PPC::INSTRUCTION_SIZE));
         }
 
-        const auto bytes = input_section->bytes(symbol.header.st_value, symbol.header.st_size);
+        const auto bytes = revo_section->bytes(symbol.header.st_value, symbol.header.st_size);
         if (!bytes) {
-            return std::unexpected(std::format(
-                "function {:#x} isn't contained within the input section", symbol.header.st_value));
+            return std::unexpected(std::format( //
+                "function at {:#x} isn't contained within \".revo_text\".",
+                symbol.header.st_value));
         }
 
         std::vector<u32> instructions(symbol.header.st_size / PPC::INSTRUCTION_SIZE);
@@ -275,7 +281,7 @@ read_revo_functions(Object& object) {
             }
 
             relocations[relocation.r_offset - symbol.header.st_value].push_back(relocation);
-            Console::debug("Relocation {:#x} assigned to function {:#x}", //
+            Console::debug("Relocation at {:#x} assigned to function {:#x}", //
                 relocation.r_offset, symbol.header.st_value);
         }
 
@@ -294,7 +300,7 @@ check_overlaps(const Object& object) {
     for (const auto& [previous, next] : std::views::pairwise(object.revo_functions)) {
         if (previous.overlaps(next)) {
             return std::unexpected(std::format( //
-                "function {:#x} (size of {:#x}) overlaps with function {:#x}", //
+                "function at {:#x} (size {:#x}) overlaps with function at {:#x}.", //
                 previous.offset, previous.size, next.offset));
         }
     }
@@ -309,8 +315,8 @@ check_relocations(const Object& object) {
             object.revo_functions, relocation.r_offset, {}, &Function::offset);
 
         if (it == object.revo_functions.begin() || !std::prev(it)->contains(relocation.r_offset)) {
-            return std::unexpected(std::format(
-                "relocation {:#x} isn't referenced by a function", relocation.r_offset));
+            return std::unexpected(std::format( //
+                "relocation at {:#x} isn't referenced by a function.", relocation.r_offset));
         }
     }
 
@@ -324,7 +330,7 @@ read_string(const Section& section, u32 offset) {
 
     if (offset >= string_table.size()) {
         return std::unexpected(std::format( //
-            "section {} has a string offset of {} (expected <{})", //
+            "section {} has a string offset of {} (expected <{}).", //
             section.index, offset, string_table.size()));
     }
 
@@ -337,7 +343,7 @@ template <typename TType>
 read_table(const Section& section) {
     if (section.data.size() % sizeof(TType) != 0) {
         return std::unexpected(std::format( //
-            "section {} (size of {}) is not a multiple of {} bytes", //
+            "section {} (size {}) is not a multiple of {} bytes.", //
             section.name, section.data.size(), sizeof(TType)));
     }
 
