@@ -126,13 +126,14 @@ parse(u32 raw, u32 address) {
 
         if (TLayout::uses_reserved_bits(raw)) {
             return std::unexpected(std::format( //
-                "reserved bits set ({:#010x}) at {:#x}", raw, address));
+                "instruction at {:#x} (raw {:#010x}) uses reserved bits.", address, raw));
         }
 
         return make_instruction<mnemonic>(raw, address);
     }
 
-    return std::unexpected(std::format("unimplemented instruction at {:#x}", address));
+    return std::unexpected(std::format( //
+        "instruction at {:#x} (raw {:#010x}) is unimplemented.", address, raw));
 }
 
 template <PPC::Mnemonic TMnemonic>

@@ -36,13 +36,14 @@ struct Section {
     SectionIndex index{};
     std::string name;
 
+    // todo: having this called "bytes" and returning an optional is weird imo
     [[nodiscard]] std::optional<std::span<const std::byte>>
     bytes(u32 address, u32 size) const {
         if (address < header.sh_addr) {
             return std::nullopt;
         }
 
-        const u32 offset = address - header.sh_addr;
+        const auto offset = address - header.sh_addr;
         if (offset >= data.size() || size > data.size() - offset) {
             return std::nullopt;
         }
