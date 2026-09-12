@@ -70,7 +70,7 @@ check_overlaps(std::span<const Section> sections) {
     for (const auto& [previous, next] : std::views::pairwise(sections)) {
         if (previous.overlaps(next)) {
             return std::unexpected(std::format( //
-                "section {:#x} (size of {:#x}) overlaps with section {:#x}", //
+                "section at {:#x} (size {:#x}) overlaps with section at {:#x}.", //
                 previous.address, previous.size, next.address));
         }
     }
@@ -108,12 +108,12 @@ place_sections(std::span<Section> sections) {
     auto data_sections = sections | std::views::filter(&Section::is_data);
 
     if (std::ranges::distance(text_sections) > DOLHeader::MAX_TEXT_SECTIONS) {
-        return std::unexpected(std::format("{} text sections exceeds the maximum of {}",
+        return std::unexpected(std::format("got {} text sections (expected <={}).",
             std::ranges::distance(text_sections), DOLHeader::MAX_TEXT_SECTIONS));
     }
 
     if (std::ranges::distance(data_sections) > DOLHeader::MAX_DATA_SECTIONS) {
-        return std::unexpected(std::format("{} data sections exceeds the maximum of {}",
+        return std::unexpected(std::format("got {} data sections (expected <={}).",
             std::ranges::distance(data_sections), DOLHeader::MAX_DATA_SECTIONS));
     }
 
@@ -161,7 +161,7 @@ write_file(const std::filesystem::path& path, const DOLHeader& header, //
 {
     std::ofstream stream(path, std::ios::binary);
     if (!stream.is_open()) {
-        return std::unexpected("failed to open file");
+        return std::unexpected("failed to open file.");
     }
 
     auto swapped = header;
@@ -172,7 +172,7 @@ write_file(const std::filesystem::path& path, const DOLHeader& header, //
     }
 
     if (!stream.write(WATERMARK.data(), WATERMARK.size())) {
-        return std::unexpected("failed to write watermark");
+        return std::unexpected("failed to write watermark.");
     }
 
     for (const auto& section : sections | std::views::filter(std::not_fn(&Section::is_bss))) {
@@ -181,7 +181,7 @@ write_file(const std::filesystem::path& path, const DOLHeader& header, //
         for (const auto bytes : section.data) {
             if (!stream.write(reinterpret_cast<const char*>(bytes.data()), bytes.size())) {
                 return std::unexpected(std::format( //
-                    "failed to write section {:#x}", section.address));
+                    "failed to write section at {:#x}.", section.address));
             }
         }
     }

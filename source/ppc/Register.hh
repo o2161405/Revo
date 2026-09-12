@@ -35,20 +35,20 @@ enum class FPR : u8 {
  * in the specification to be correct.
  */
 enum class SPR : u16 {
-    // --- General User Model UISA ---
+    // General User Model UISA
     XER  = 1, ///< Integer Exception Register
     LR   = 8, ///< Link Register
     CTR  = 9, ///< Count Register
 
-    // --- Decrementer ---
+    // Decrementer
     // all alone :(
     DEC  = 22, ///< Decrementer
 
-    // --- Save-Restore Registers ---
+    // Save-Restore Registers
     SRR0 = 26, ///< Save-Restore Register 0
     SRR1 = 27, ///< Save-Restore Register 1
 
-    // --- Standard System Control & Exceptions ---
+    // Standard System Control & Exceptions
     DSISR = 18,  ///< Data Storage Interrupt Status Register
     DAR   = 19,  ///< Data Address Register
     SDR1  = 25,  ///< Storage Description Register 1
@@ -59,11 +59,11 @@ enum class SPR : u16 {
     EAR   = 282, ///< External Access Register
     PVR   = 287, ///< Processor Version Register
 
-    // --- Time Base Registers ---
+    // Time Base Registers
     TBL = 284, ///< Time Base Lower (Write)
     TBU = 285, ///< Time Base Upper (Write)
 
-    // --- Block Address Translations Registers ---
+    // Block Address Translations Registers
     IBAT0U = 528, ///< Instruction BAT 0 Upper
     IBAT0L = 529, ///< Instruction BAT 0 Lower
     IBAT1U = 530, ///< Instruction BAT 1 Upper
@@ -97,7 +97,7 @@ enum class SPR : u16 {
     DBAT7U = 574, ///< Data BAT 7 Upper
     DBAT7L = 575, ///< Data BAT 7 Lower
 
-    // --- Graphics Quantization Registers ---
+    // Graphics Quantization Registers
     GQR0 = 912, ///< Graphics Quantization Register 0
     GQR1 = 913, ///< Graphics Quantization Register 1
     GQR2 = 914, ///< Graphics Quantization Register 2
@@ -107,45 +107,45 @@ enum class SPR : u16 {
     GQR6 = 918, ///< Graphics Quantization Register 6
     GQR7 = 919, ///< Graphics Quantization Register 7
 
-    // --- Hardware Implementation Dependent Registers ---
+    // Hardware Implementation Dependent Registers
     HID2 = 920,  ///< Hardware Implementation Dependent Register 2
     HID0 = 1008, ///< Hardware Implementation Dependent Register 0
     HID1 = 1009, ///< Hardware Implementation Dependent Register 1
     HID4 = 1011, ///< Hardware Implementation Dependent Register 4
 
-    // --- Write Pipe Address Register ---
+    // Write Pipe Address Register
     // all alone too, maybe him and DEC can be buddies? :)
     WPAR = 921, ///< Write Pipe Address Register
 
-    // --- Direct Memory Access Registers ---
+    // Direct Memory Access Registers
     DMAU = 922, ///< DMA Upper
     DMAL = 923, ///< DMA Lower
 
-    // --- Breakpoint Registers ---
+    // Breakpoint Registers
     IABR = 1010, ///< Instruction Address Breakpoint Register
     DABR = 1013, ///< Data Address Breakpoint Register
 
-    // --- Cache Control Registers ---
+    // Cache Control Registers
     L2CR = 1017, ///< L2 Cache Control Register
     ICTC = 1019, ///< Instruction Cache Throttling Control Register
 
-    // --- Thermal Management Registers ---
+    // Thermal Management Registers
     THRM1 = 1020, ///< Thermal Management Register 1
     THRM2 = 1021, ///< Thermal Management Register 2
     THRM3 = 1022, ///< Thermal Management Register 3
 
-    // --- Performance Monitor Registers ---
+    // Performance Monitor Registers
     MMCR0 = 952, ///< Monitor Mode Control Register 0 
     MMCR1 = 956, ///< Monitor Mode Control Register 1
 
-    // --- Performance Monitor Counter Registers ---
+    // Performance Monitor Counter Registers
     PMC1 = 953, ///< Performance Monitor Counter Register 1
     PMC2 = 954, ///< Performance Monitor Counter Register 2
     SIA  = 955, ///< Sampled Instruction Address Register
     PMC3 = 957, ///< Performance Monitor Counter Register 3
     PMC4 = 958, ///< Performance Monitor Counter Register 4
 
-    // --- Performance Monitor Registers ---
+    // Performance Monitor Registers
     UMMCR0 = 936, ///< User Monitor Mode Control Register 0
     UPMC1  = 937, ///< User Performance Monitor Counter Register 1
     UPMC2  = 938, ///< User Performance Monitor Counter Register 2

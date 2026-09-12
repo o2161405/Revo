@@ -69,13 +69,13 @@ mark_leaders(std::span<const Decode::Function> functions) {
 
             if (terminator == Terminator::Indirect) {
                 return std::unexpected(std::format( //
-                    "branch {:#x} has a computed destination, which isn't supported",
+                    "branch at {:#x} has a computed destination, which isn't supported.",
                     instruction.address));
             }
 
             if (terminator == Terminator::Call && !destination) {
                 return std::unexpected(std::format( //
-                    "call {:#x} has a computed destination, which isn't supported",
+                    "call at {:#x} has a computed destination, which isn't supported.",
                     instruction.address));
             }
 
@@ -147,12 +147,12 @@ construct_edges(Graph& graph) {
 
             if (!destination) {
                 return std::unexpected(std::format( //
-                    "block {:#x} falls through to {:#x}, which isn't associated with a function", //
+                    "block at {:#x} falls through to {:#x}, which isn't in an input function.", //
                     block.address(), next_address));
             }
 
             if (!function.contains(*destination)) {
-                Console::warning("Block {:#x} falls through into function {:#x}", //
+                Console::warning("Block at {:#x} falls through into function {:#x}", //
                     block.address(), next_address);
             }
         }
@@ -160,7 +160,7 @@ construct_edges(Graph& graph) {
 
     for (const auto& edge : graph.edges | std::views::values //
             | std::views::filter(&Edge::is_external)) {
-        Console::debug("Edge {:#x} branches to external address {:#x}", //
+        Console::debug("Edge at {:#x} branches to external address {:#x}", //
             edge.source_address, edge.destination_address);
     }
 
@@ -180,7 +180,7 @@ check_returns(const Graph& graph) {
             if (instruction_terminator(block.last()) == Terminator::Return &&
                 !context.return_in_lr) {
                 return std::unexpected(std::format( //
-                    "return {:#x} has a computed destination, which isn't supported",
+                    "return at {:#x} has a computed destination, which isn't supported.",
                     block.last().address));
             }
         }
@@ -215,7 +215,7 @@ check_unreachable(const Graph& graph) {
 
     for (const auto [id, block] : Util::enumerate<BlockId>(graph.blocks)) {
         if (!reachable[id]) {
-            Console::warning("Block {:#x} is unreachable", block.address());
+            Console::warning("Block at {:#x} is unreachable", block.address());
         }
     }
 
