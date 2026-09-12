@@ -71,9 +71,4 @@ struct Section {
     }
 };
 
-struct Output {
-    DOLHeader header{};
-    std::vector<Section> sections;
-};
-
 } // namespace Revo::DOL

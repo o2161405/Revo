@@ -1,7 +1,6 @@
 #include "Builder.hh"
 
 #include "cfg/LinkImplementation.hh"
-#include "cfg/Terminator.hh"
 #include "ppc/Mnemonic.hh"
 #include "util/Util.hh"
 
@@ -14,6 +13,28 @@
 // todo: make this use symbol names instead of addresses
 
 namespace Revo::CFG {
+
+namespace {
+
+[[nodiscard]] constexpr Terminator
+instruction_terminator(const Decode::Instruction& instruction) {
+    if (instruction.is_call()) {
+        return Terminator::Call;
+    }
+    if (instruction.branch_destination()) {
+        return Terminator::Branch;
+    }
+    if (!instruction.indirect_branch_source) {
+        return Terminator::Fallthrough;
+    }
+    if (*instruction.indirect_branch_source == PPC::Register::SPR::LR) {
+        return Terminator::Return;
+    }
+
+    return Terminator::Indirect;
+}
+
+} // namespace
 
 std::expected<Graph, std::string>
 build(std::span<const Decode::Function> functions) {
@@ -43,16 +64,16 @@ mark_leaders(std::span<const Decode::Function> functions) {
         leaders.insert(function.offset);
 
         for (const auto& instruction : function.instructions) {
-            const auto instruction_terminator = terminator(instruction);
+            const auto terminator = instruction_terminator(instruction);
             const auto destination = instruction.branch_destination();
 
-            if (instruction_terminator == Terminator::Indirect) {
+            if (terminator == Terminator::Indirect) {
                 return std::unexpected(std::format( //
                     "branch {:#x} has a computed destination, which isn't supported",
                     instruction.address));
             }
 
-            if (instruction_terminator == Terminator::Call && !destination) {
+            if (terminator == Terminator::Call && !destination) {
                 return std::unexpected(std::format( //
                     "call {:#x} has a computed destination, which isn't supported",
                     instruction.address));
@@ -62,8 +83,7 @@ mark_leaders(std::span<const Decode::Function> functions) {
                 leaders.insert(*destination);
             }
 
-            if (instruction_terminator == Terminator::Branch ||
-                instruction_terminator == Terminator::Return) {
+            if (terminator == Terminator::Branch || terminator == Terminator::Return) {
                 const auto next_address = instruction.address + PPC::INSTRUCTION_SIZE;
 
                 if (function.contains(next_address)) {
@@ -84,8 +104,10 @@ construct_blocks(Graph& graph, std::span<const Decode::Function> functions,
         return !leaders.contains(next.address);
     };
 
-    const auto make_block = [](auto instructions) { //
-        return Block{.instructions = instructions};
+    const auto make_block = [](auto instructions) {
+        return Block{//
+            .instructions = instructions | std::ranges::to<std::vector>(),
+            .terminator = instruction_terminator(instructions.back())};
     };
 
     for (const auto& function : functions) {
@@ -111,15 +133,15 @@ construct_edges(Graph& graph) {
                 graph.add_edge(id, call, *call.branch_destination(), Edge::Type::Call);
             }
 
-            if (terminator(last) == Terminator::Branch) {
+            if (instruction_terminator(last) == Terminator::Branch) {
                 graph.add_edge(id, last, *last.branch_destination(), Edge::Type::Branch);
             }
 
-            if (!falls_through(last)) {
+            if (!block.falls_through()) {
                 continue;
             }
 
-            const auto next_address = block.last().address + PPC::INSTRUCTION_SIZE;
+            const auto next_address = last.address + PPC::INSTRUCTION_SIZE;
             const auto destination = graph.add_edge(
                 id, last, next_address, Edge::Type::Fallthrough);
 
@@ -155,7 +177,8 @@ check_returns(const Graph& graph) {
                 apply_link(context, instruction);
             }
 
-            if (terminator(block.last()) == Terminator::Return && !context.return_in_lr) {
+            if (instruction_terminator(block.last()) == Terminator::Return &&
+                !context.return_in_lr) {
                 return std::unexpected(std::format( //
                     "return {:#x} has a computed destination, which isn't supported",
                     block.last().address));

@@ -17,8 +17,17 @@ namespace Revo::CFG {
 
 using BlockId = std::size_t;
 
+enum class Terminator : u8 {
+    Fallthrough,
+    Call,
+    Branch,
+    Return,
+    Indirect,
+};
+
 struct Block {
-    std::span<const Decode::Instruction> instructions;
+    std::vector<Decode::Instruction> instructions;
+    Terminator terminator;
 
     [[nodiscard]] constexpr u32
     address() const {
@@ -28,6 +37,12 @@ struct Block {
     [[nodiscard]] constexpr const Decode::Instruction&
     last() const {
         return instructions.back();
+    }
+
+    [[nodiscard]] constexpr bool
+    falls_through() const {
+        return terminator == Terminator::Fallthrough //
+            || terminator == Terminator::Call || last().conditional_branch();
     }
 };
 
