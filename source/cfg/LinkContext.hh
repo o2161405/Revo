@@ -1,6 +1,6 @@
 #pragma once
 
-#include "decode/Types.hh"
+#include "decoder/Types.hh"
 #include "ppc/Operand.hh"
 
 #include <bitset>

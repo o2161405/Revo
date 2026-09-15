@@ -1,5 +1,5 @@
 #include "cfg/Builder.hh"
-#include "decode/Decoder.hh"
+#include "decoder/Decoder.hh"
 #include "dol/Writer.hh"
 #include "elf/Parser.hh"
 
@@ -26,7 +26,7 @@ main() {
         return 1;
     }
 
-    auto functions = Decode::decode(object->revo_functions);
+    auto functions = Decoder::decode(object->revo_functions);
     if (!functions) {
         Console::error("Failed to decode: {}", functions.error());
         return 1;

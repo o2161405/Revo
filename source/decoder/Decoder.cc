@@ -10,7 +10,7 @@
 
 // todo: find better names for parse and make_instruction because they are awful
 
-namespace Revo::Decode {
+namespace Revo::Decoder {
 
 using namespace PPC;
 
@@ -100,8 +100,7 @@ std::expected<Instruction, std::string>
 parse(u32 raw, u32 address) {
     const auto opcd = Form::OPCD::get(raw);
 
-    template for (constexpr auto enumerator :
-        std::define_static_array(std::meta::enumerators_of(^^Mnemonic))) {
+    template for (constexpr auto enumerator : Util::enumerators_array(^^Mnemonic)) {
         constexpr auto mnemonic = [:enumerator:];
         using TSpecification = InstructionSpecification<mnemonic>;
 
@@ -155,7 +154,7 @@ make_instruction(u32 raw, u32 address) {
         }
     }
 
-    Decode::Instruction decoded_instruction{.mnemonic = TMnemonic, .address = address};
+    Decoder::Instruction decoded_instruction{.mnemonic = TMnemonic, .address = address};
 
     template for (constexpr auto field : TLayout::fields) {
         using TField = [:field:];
@@ -210,4 +209,4 @@ make_instruction(u32 raw, u32 address) {
 
 } // namespace Impl
 
-} // namespace Revo::Decode
+} // namespace Revo::Decoder

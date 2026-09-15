@@ -14,7 +14,7 @@
 #include <utility>
 #include <vector>
 
-namespace Revo::Decode {
+namespace Revo::Decoder {
 
 using RelativeOffset = u32;
 
@@ -87,4 +87,4 @@ struct Function {
     }
 };
 
-} // namespace Revo::Decode
+} // namespace Revo::Decoder

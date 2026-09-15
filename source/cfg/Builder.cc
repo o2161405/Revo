@@ -1,7 +1,6 @@
 #include "Builder.hh"
 
 #include "cfg/LinkImplementation.hh"
-#include "cfg/Terminator.hh"
 #include "ppc/Mnemonic.hh"
 #include "util/Util.hh"
 
@@ -15,8 +14,30 @@
 
 namespace Revo::CFG {
 
+namespace {
+
+[[nodiscard]] constexpr Terminator
+instruction_terminator(const Decoder::Instruction& instruction) {
+    if (instruction.is_call()) {
+        return Terminator::Call;
+    }
+    if (instruction.branch_destination()) {
+        return Terminator::Branch;
+    }
+    if (!instruction.indirect_branch_source) {
+        return Terminator::Fallthrough;
+    }
+    if (*instruction.indirect_branch_source == PPC::Register::SPR::LR) {
+        return Terminator::Return;
+    }
+
+    return Terminator::Indirect;
+}
+
+} // namespace
+
 std::expected<Graph, std::string>
-build(std::span<const Decode::Function> functions) {
+build(std::span<const Decoder::Function> functions) {
     Graph graph;
 
     return Impl::mark_leaders(functions)
@@ -36,23 +57,23 @@ build(std::span<const Decode::Function> functions) {
 namespace Impl {
 
 std::expected<std::flat_set<u32>, std::string>
-mark_leaders(std::span<const Decode::Function> functions) {
+mark_leaders(std::span<const Decoder::Function> functions) {
     std::flat_set<u32> leaders;
 
     for (const auto& function : functions) {
         leaders.insert(function.offset);
 
         for (const auto& instruction : function.instructions) {
-            const auto instruction_terminator = terminator(instruction);
+            const auto terminator = instruction_terminator(instruction);
             const auto destination = instruction.branch_destination();
 
-            if (instruction_terminator == Terminator::Indirect) {
+            if (terminator == Terminator::Indirect) {
                 return std::unexpected(std::format( //
                     "branch at {:#x} has a computed destination, which isn't supported.",
                     instruction.address));
             }
 
-            if (instruction_terminator == Terminator::Call && !destination) {
+            if (terminator == Terminator::Call && !destination) {
                 return std::unexpected(std::format( //
                     "call at {:#x} has a computed destination, which isn't supported.",
                     instruction.address));
@@ -62,8 +83,7 @@ mark_leaders(std::span<const Decode::Function> functions) {
                 leaders.insert(*destination);
             }
 
-            if (instruction_terminator == Terminator::Branch ||
-                instruction_terminator == Terminator::Return) {
+            if (terminator == Terminator::Branch || terminator == Terminator::Return) {
                 const auto next_address = instruction.address + PPC::INSTRUCTION_SIZE;
 
                 if (function.contains(next_address)) {
@@ -77,15 +97,17 @@ mark_leaders(std::span<const Decode::Function> functions) {
 }
 
 std::expected<void, std::string>
-construct_blocks(Graph& graph, std::span<const Decode::Function> functions,
+construct_blocks(Graph& graph, std::span<const Decoder::Function> functions,
     const std::flat_set<u32>& leaders) //
 {
     const auto same_block = [&](const auto&, const auto& next) {
         return !leaders.contains(next.address);
     };
 
-    const auto make_block = [](auto instructions) { //
-        return Block{.instructions = instructions};
+    const auto make_block = [](auto instructions) {
+        return Block{//
+            .instructions = instructions,
+            .terminator = instruction_terminator(instructions.back())};
     };
 
     for (const auto& function : functions) {
@@ -107,19 +129,19 @@ construct_edges(Graph& graph) {
             const auto& last = block.last();
 
             for (const auto& call : block.instructions //
-                    | std::views::filter(&Decode::Instruction::is_call)) {
+                    | std::views::filter(&Decoder::Instruction::is_call)) {
                 graph.add_edge(id, call, *call.branch_destination(), Edge::Type::Call);
             }
 
-            if (terminator(last) == Terminator::Branch) {
+            if (instruction_terminator(last) == Terminator::Branch) {
                 graph.add_edge(id, last, *last.branch_destination(), Edge::Type::Branch);
             }
 
-            if (!falls_through(last)) {
+            if (!block.falls_through()) {
                 continue;
             }
 
-            const auto next_address = block.last().address + PPC::INSTRUCTION_SIZE;
+            const auto next_address = last.address + PPC::INSTRUCTION_SIZE;
             const auto destination = graph.add_edge(
                 id, last, next_address, Edge::Type::Fallthrough);
 
@@ -155,7 +177,8 @@ check_returns(const Graph& graph) {
                 apply_link(context, instruction);
             }
 
-            if (terminator(block.last()) == Terminator::Return && !context.return_in_lr) {
+            if (instruction_terminator(block.last()) == Terminator::Return &&
+                !context.return_in_lr) {
                 return std::unexpected(std::format( //
                     "return at {:#x} has a computed destination, which isn't supported.",
                     block.last().address));
@@ -235,9 +258,8 @@ merge_contexts(const Graph& graph, const Function& function) {
 }
 
 void
-apply_link(LinkContext& context, const Decode::Instruction& instruction) {
-    template for (constexpr auto enumerator :
-        std::define_static_array(std::meta::enumerators_of(^^PPC::Mnemonic))) {
+apply_link(LinkContext& context, const Decoder::Instruction& instruction) {
+    template for (constexpr auto enumerator : Util::enumerators_array(^^PPC::Mnemonic)) {
         constexpr auto mnemonic = [:enumerator:];
         if (instruction.mnemonic == mnemonic) {
             LinkImplementation<mnemonic>::apply(context, instruction);
