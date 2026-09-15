@@ -22,11 +22,6 @@ parse(const std::filesystem::path& path) {
         return std::unexpected("failed to open file.");
     }
 
-    return parse(stream);
-}
-
-std::expected<Object, std::string>
-parse(std::istream& stream) {
     Object object;
 
     return Impl::read_elf_header(object, stream)

@@ -17,7 +17,7 @@ namespace Revo::CFG {
 namespace {
 
 [[nodiscard]] constexpr Terminator
-instruction_terminator(const Decode::Instruction& instruction) {
+instruction_terminator(const Decoder::Instruction& instruction) {
     if (instruction.is_call()) {
         return Terminator::Call;
     }
@@ -37,7 +37,7 @@ instruction_terminator(const Decode::Instruction& instruction) {
 } // namespace
 
 std::expected<Graph, std::string>
-build(std::span<const Decode::Function> functions) {
+build(std::span<const Decoder::Function> functions) {
     Graph graph;
 
     return Impl::mark_leaders(functions)
@@ -57,7 +57,7 @@ build(std::span<const Decode::Function> functions) {
 namespace Impl {
 
 std::expected<std::flat_set<u32>, std::string>
-mark_leaders(std::span<const Decode::Function> functions) {
+mark_leaders(std::span<const Decoder::Function> functions) {
     std::flat_set<u32> leaders;
 
     for (const auto& function : functions) {
@@ -97,7 +97,7 @@ mark_leaders(std::span<const Decode::Function> functions) {
 }
 
 std::expected<void, std::string>
-construct_blocks(Graph& graph, std::span<const Decode::Function> functions,
+construct_blocks(Graph& graph, std::span<const Decoder::Function> functions,
     const std::flat_set<u32>& leaders) //
 {
     const auto same_block = [&](const auto&, const auto& next) {
@@ -106,7 +106,7 @@ construct_blocks(Graph& graph, std::span<const Decode::Function> functions,
 
     const auto make_block = [](auto instructions) {
         return Block{//
-            .instructions = instructions | std::ranges::to<std::vector>(),
+            .instructions = instructions,
             .terminator = instruction_terminator(instructions.back())};
     };
 
@@ -129,7 +129,7 @@ construct_edges(Graph& graph) {
             const auto& last = block.last();
 
             for (const auto& call : block.instructions //
-                    | std::views::filter(&Decode::Instruction::is_call)) {
+                    | std::views::filter(&Decoder::Instruction::is_call)) {
                 graph.add_edge(id, call, *call.branch_destination(), Edge::Type::Call);
             }
 
@@ -258,9 +258,8 @@ merge_contexts(const Graph& graph, const Function& function) {
 }
 
 void
-apply_link(LinkContext& context, const Decode::Instruction& instruction) {
-    template for (constexpr auto enumerator :
-        std::define_static_array(std::meta::enumerators_of(^^PPC::Mnemonic))) {
+apply_link(LinkContext& context, const Decoder::Instruction& instruction) {
+    template for (constexpr auto enumerator : Util::enumerators_array(^^PPC::Mnemonic)) {
         constexpr auto mnemonic = [:enumerator:];
         if (instruction.mnemonic == mnemonic) {
             LinkImplementation<mnemonic>::apply(context, instruction);

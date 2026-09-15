@@ -49,4 +49,14 @@ align_down(s32 value, s32 alignment) {
     return value & ~(alignment - 1);
 }
 
+[[nodiscard]] consteval auto
+identifier_string(auto info) {
+    return std::define_static_string(std::meta::identifier_of(info));
+}
+
+[[nodiscard]] consteval auto
+enumerators_array(auto info) {
+    return std::define_static_array(std::meta::enumerators_of(info));
+}
+
 } // namespace Revo::Util
