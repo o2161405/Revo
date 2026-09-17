@@ -6,6 +6,7 @@
 #include "util/Util.hh"
 
 #include <algorithm>
+#include <format>
 #include <meta>
 
 // todo: find better names for parse and make_instruction because they are awful

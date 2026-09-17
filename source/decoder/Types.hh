@@ -1,17 +1,15 @@
 #pragma once
 
 #include "elf/Types.hh"
-#include "ppc/InstructionSpecification.hh"
 #include "ppc/Mnemonic.hh"
 #include "ppc/Operand.hh"
 
+#include <algorithm>
+#include <array>
 #include <flat_map>
 #include <inplace_vector>
-#include <meta>
 #include <optional>
 #include <span>
-#include <tuple>
-#include <utility>
 #include <vector>
 
 namespace Revo::Decoder {

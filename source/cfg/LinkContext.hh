@@ -1,11 +1,11 @@
 #pragma once
 
-#include "decoder/Types.hh"
 #include "ppc/Operand.hh"
 
 #include <bitset>
 #include <flat_set>
 #include <functional>
+#include <optional>
 #include <utility>
 
 namespace Revo::CFG {

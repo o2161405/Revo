@@ -1,12 +1,10 @@
 #include "Parser.hh"
 
 #include "elf/Constants.hh"
-#include "elf/Symbol.hh"
 #include "ppc/Common.hh"
 #include "util/Util.hh"
 
 #include <algorithm>
-#include <array>
 #include <cstring>
 #include <flat_map>
 #include <format>

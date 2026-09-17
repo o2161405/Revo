@@ -1,7 +1,6 @@
 #pragma once
 
 #include "elf/Constants.hh"
-#include "elf/Types.hh"
 
 #include <cstddef>
 #include <optional>

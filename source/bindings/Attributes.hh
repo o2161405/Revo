@@ -1,5 +1,6 @@
 #pragma once
 
+#include <meta>
 #include <string_view>
 
 namespace Revo::Bindings {

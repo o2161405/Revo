@@ -1,7 +1,6 @@
 #pragma once
 
 #include <bit>
-#include <concepts>
 #include <meta>
 #include <ranges>
 #include <type_traits>

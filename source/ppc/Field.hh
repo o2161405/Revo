@@ -3,8 +3,8 @@
 #include "ppc/Common.hh"
 #include "ppc/Operand.hh"
 
-#include <concepts>
 #include <meta>
+#include <type_traits>
 
 namespace Revo::PPC {
 

@@ -3,6 +3,7 @@
 #include <array>
 #include <cstddef>
 #include <span>
+#include <string_view>
 #include <vector>
 
 namespace Revo::DOL {

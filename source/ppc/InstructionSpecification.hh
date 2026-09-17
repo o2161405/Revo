@@ -4,10 +4,7 @@
 #include "ppc/Form.hh"
 #include "ppc/Mnemonic.hh"
 
-#include <algorithm>
-#include <concepts>
-#include <cstddef>
-#include <meta>
+#include <array>
 
 namespace Revo::PPC {
 

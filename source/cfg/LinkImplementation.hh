@@ -1,6 +1,7 @@
 #pragma once
 
 #include "cfg/LinkContext.hh"
+#include "decoder/Types.hh"
 #include "ppc/Mnemonic.hh"
 #include "util/Util.hh"
 

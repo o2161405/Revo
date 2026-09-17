@@ -3,6 +3,7 @@
 #include "bindings/Attributes.hh"
 #include "ppc/Register.hh"
 
+#include <optional>
 #include <utility>
 #include <variant>
 
