@@ -1,6 +1,7 @@
 #include "Builder.hh"
 
 #include "cfg/LinkImplementation.hh"
+#include "ppc/Common.hh"
 #include "ppc/Mnemonic.hh"
 #include "util/Util.hh"
 

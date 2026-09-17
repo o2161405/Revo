@@ -1,6 +1,7 @@
 #pragma once
 
 #include "cfg/LinkContext.hh"
+#include "decoder/Types.hh"
 #include "ppc/Mnemonic.hh"
 #include "util/Util.hh"
 
@@ -11,7 +12,7 @@ struct BaseLinkImplementation {
     apply(LinkContext& context, const Decoder::Instruction& instruction) {
         for (const auto& operand : instruction.operands) {
             if (operand.is<PPC::Register::GPR>() &&
-                (operand.access & PPC::Operand::Access::Write) != PPC::Operand::Access::None) {
+                (operand.access & PPC::Operand::Access::Write) != PPC::Operand::Access::Default) {
                 context.set_lr(operand, false);
 
                 if (operand.is(PPC::Register::GPR::r1)) {

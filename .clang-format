@@ -26,7 +26,7 @@ BreakBeforeBinaryOperators: None
 BreakBeforeBraces: Custom
 BraceWrapping:
   BeforeElse: true
-BreakBeforeTernaryOperators: False
+BreakBeforeTernaryOperators: True
 BreakStringLiterals: True
 ColumnLimit: 100
 ContinuationIndentWidth: 4

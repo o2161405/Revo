@@ -3,6 +3,7 @@
 #include "bindings/Attributes.hh"
 #include "ppc/Register.hh"
 
+#include <optional>
 #include <utility>
 #include <variant>
 
@@ -15,26 +16,22 @@ struct Operand {
     };
 
     struct BranchDestination {
-        [[= Bindings::Repr::Format{"{:#x}"} ]] u32 address;
+        [[= Bindings::ReprFormat{"{:#x}"} ]] u32 address;
     };
 
     struct BranchOptions {
-        [[= Bindings::Repr::Format{"{:#07b}"} ]] u8 value;
+        [[= Bindings::ReprFormat{"{:#07b}"} ]] u8 value;
     };
 
-    enum class
-    [[= Bindings::Annotation::Flag{} ]] [[= Bindings::Annotation::Arithmetic{} ]]
-    Access : u8 {
-        None      = 0,
+    enum class Access : u8 {
+        Default   = 0,
         Read      = 1 << 0,
         Write     = 1 << 1,
         ReadWrite = Read | Write
     };
 
-    enum class
-    [[= Bindings::Annotation::Flag{} ]] [[= Bindings::Annotation::Arithmetic{} ]]
-    Behavior : u8 {
-        None     = 0,
+    enum class Behavior : u8 {
+        Default  = 0,
         Record   = 1 << 0,
         Link     = 1 << 1,
         Absolute = 1 << 2,
@@ -47,7 +44,7 @@ struct Operand {
         Immediate, BranchDestination, BranchOptions>;
 
     Variant value;
-    Access access{Access::None};
+    Access access{Access::Default};
 
     template <typename TType>
     [[nodiscard]] constexpr bool

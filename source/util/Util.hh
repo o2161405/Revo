@@ -1,7 +1,6 @@
 #pragma once
 
 #include <bit>
-#include <concepts>
 #include <meta>
 #include <ranges>
 #include <type_traits>
@@ -50,12 +49,12 @@ align_down(s32 value, s32 alignment) {
 }
 
 [[nodiscard]] consteval auto
-identifier_string(auto info) {
+identifier_string(std::meta::info info) {
     return std::define_static_string(std::meta::identifier_of(info));
 }
 
 [[nodiscard]] consteval auto
-enumerators_array(auto info) {
+enumerators_array(std::meta::info info) {
     return std::define_static_array(std::meta::enumerators_of(info));
 }
 

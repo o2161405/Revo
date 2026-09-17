@@ -2,8 +2,11 @@
 
 #include "util/Util.hh"
 
+#include <algorithm>
 #include <format>
 #include <fstream>
+#include <functional>
+#include <ranges>
 
 namespace Revo::DOL {
 
