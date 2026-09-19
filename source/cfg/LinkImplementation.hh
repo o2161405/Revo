@@ -1,6 +1,7 @@
 #pragma once
 
 #include "cfg/LinkContext.hh"
+#include "decoder/Types.hh"
 #include "ppc/Mnemonic.hh"
 #include "util/Util.hh"
 
@@ -8,7 +9,7 @@ namespace Revo::CFG {
 
 struct BaseLinkImplementation {
     static void
-    apply(LinkContext& context, const Decode::Instruction& instruction) {
+    apply(LinkContext& context, const Decoder::Instruction& instruction) {
         for (const auto& operand : instruction.operands) {
             if (operand.is<PPC::Register::GPR>() &&
                 (operand.access & PPC::Operand::Access::Write) != PPC::Operand::Access::None) {
@@ -28,7 +29,7 @@ struct LinkImplementation : BaseLinkImplementation {};
 template <>
 struct LinkImplementation<PPC::Mnemonic::MFSPR> {
     static void
-    apply(LinkContext& context, const Decode::Instruction& instruction) {
+    apply(LinkContext& context, const Decoder::Instruction& instruction) {
         const auto [rt, spr] = instruction.get_operands<2uz>();
 
         context.set_lr(rt, spr.is(PPC::Register::SPR::LR) && context.return_in_lr);
@@ -38,7 +39,7 @@ struct LinkImplementation<PPC::Mnemonic::MFSPR> {
 template <>
 struct LinkImplementation<PPC::Mnemonic::STWU> {
     static void
-    apply(LinkContext& context, const Decode::Instruction& instruction) {
+    apply(LinkContext& context, const Decoder::Instruction& instruction) {
         const auto [rs, ra, d] = instruction.get_operands<3uz>();
 
         if (ra.is(PPC::Register::GPR::r1) && context.current_sp_offset) {
@@ -53,7 +54,7 @@ struct LinkImplementation<PPC::Mnemonic::STWU> {
 template <>
 struct LinkImplementation<PPC::Mnemonic::MTSPR> {
     static void
-    apply(LinkContext& context, const Decode::Instruction& instruction) {
+    apply(LinkContext& context, const Decoder::Instruction& instruction) {
         const auto [rs, spr] = instruction.get_operands<2uz>();
 
         if (spr.is(PPC::Register::SPR::LR)) {
@@ -65,7 +66,7 @@ struct LinkImplementation<PPC::Mnemonic::MTSPR> {
 template <>
 struct LinkImplementation<PPC::Mnemonic::STW> {
     static void
-    apply(LinkContext& context, const Decode::Instruction& instruction) {
+    apply(LinkContext& context, const Decoder::Instruction& instruction) {
         const auto [rs, ra, d] = instruction.get_operands<3uz>();
 
         if (ra.is(PPC::Register::GPR::r1) && context.current_sp_offset) {
@@ -77,7 +78,7 @@ struct LinkImplementation<PPC::Mnemonic::STW> {
 template <>
 struct LinkImplementation<PPC::Mnemonic::LWZ> {
     static void
-    apply(LinkContext& context, const Decode::Instruction& instruction) {
+    apply(LinkContext& context, const Decoder::Instruction& instruction) {
         const auto [rt, ra, d] = instruction.get_operands<3uz>();
 
         context.set_lr(rt,
@@ -89,7 +90,7 @@ struct LinkImplementation<PPC::Mnemonic::LWZ> {
 template <>
 struct LinkImplementation<PPC::Mnemonic::ADDI> {
     static void
-    apply(LinkContext& context, const Decode::Instruction& instruction) {
+    apply(LinkContext& context, const Decoder::Instruction& instruction) {
         const auto [rt, ra, si] = instruction.get_operands<3uz>();
 
         context.set_lr(rt, false);
@@ -110,7 +111,7 @@ struct LinkImplementation<PPC::Mnemonic::ADDI> {
 template <>
 struct LinkImplementation<PPC::Mnemonic::STB> {
     static void
-    apply(LinkContext& context, const Decode::Instruction& instruction) {
+    apply(LinkContext& context, const Decoder::Instruction& instruction) {
         const auto [_, ra, d] = instruction.get_operands<3uz>();
 
         if (ra.is(PPC::Register::GPR::r1) && context.current_sp_offset) {

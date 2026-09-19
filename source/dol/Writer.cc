@@ -2,8 +2,11 @@
 
 #include "util/Util.hh"
 
+#include <algorithm>
 #include <format>
 #include <fstream>
+#include <functional>
+#include <ranges>
 
 namespace Revo::DOL {
 
@@ -26,26 +29,27 @@ section_type(const ELF::Section& section) {
 
 std::expected<void, std::string>
 write(const std::filesystem::path& path, const ELF::Object& object) {
-    Output output;
+    DOLHeader header{};
+    std::vector<Section> sections;
 
-    return Impl::make_sections(output, object)
-        .transform([&] { std::ranges::sort(output.sections, {}, &Section::address); })
-        .and_then([&] { return Impl::check_overlaps(output); })
-        .transform([&] { Impl::merge_sections(output); })
-        .and_then([&] { return Impl::place_sections(output); })
-        .transform([&] { Impl::make_header(output, object); })
-        .and_then([&] { return Impl::write_file(output, path); });
+    return Impl::make_sections(sections, object.sections)
+        .transform([&] { std::ranges::sort(sections, {}, &Section::address); })
+        .and_then([&] { return Impl::check_overlaps(sections); })
+        .transform([&] { Impl::merge_sections(sections); })
+        .and_then([&] { return Impl::place_sections(sections); })
+        .transform([&] { return Impl::make_header(header, sections, object.elf_header.e_entry); })
+        .and_then([&] { return Impl::write_file(path, header, sections); });
 }
 
 namespace Impl {
 
 std::expected<void, std::string>
-make_sections(Output& output, const ELF::Object& object) {
-    const auto is_empty = [](const ELF::Section& section) { //
+make_sections(std::vector<Section>& sections, std::span<const ELF::Section> elf_sections) {
+    const auto is_empty = [](const auto& section) { //
         return section.header.sh_size == 0;
     };
 
-    for (const auto& section : object.sections //
+    for (const auto& section : elf_sections //
             | std::views::filter(&ELF::Section::is_allocated) //
             | std::views::filter(std::not_fn(is_empty))) {
         Section result{//
@@ -58,15 +62,15 @@ make_sections(Output& output, const ELF::Object& object) {
             result.data.push_back(std::span{section.data});
         }
 
-        output.sections.push_back(std::move(result));
+        sections.push_back(std::move(result));
     }
 
     return {};
 }
 
 std::expected<void, std::string>
-check_overlaps(const Output& output) {
-    for (const auto& [previous, next] : std::views::pairwise(output.sections)) {
+check_overlaps(std::span<const Section> sections) {
+    for (const auto& [previous, next] : std::views::pairwise(sections)) {
         if (previous.overlaps(next)) {
             return std::unexpected(std::format( //
                 "section at {:#x} (size {:#x}) overlaps with section at {:#x}.", //
@@ -78,33 +82,33 @@ check_overlaps(const Output& output) {
 }
 
 void
-merge_sections(Output& output) {
-    const auto can_merge = [](const Section& previous, const Section& next) {
+merge_sections(std::vector<Section>& sections) {
+    const auto can_merge = [](const auto& previous, const auto& next) {
         return previous.type == next.type && previous.end() == next.address;
     };
 
     std::vector<Section> result;
-    result.reserve(output.sections.size());
+    result.reserve(sections.size());
 
-    for (const auto& sections : output.sections | std::views::chunk_by(can_merge)) {
-        auto& merged = result.emplace_back(sections.front());
+    for (const auto& sections_chunk : sections | std::views::chunk_by(can_merge)) {
+        auto& merged = result.emplace_back(sections_chunk.front());
 
-        for (const auto& section : sections | std::views::drop(1)) {
+        for (const auto& section : sections_chunk | std::views::drop(1)) {
             merged.size += section.size;
             merged.data.append_range(section.data);
         }
     }
 
-    output.sections = std::move(result);
+    sections = std::move(result);
 }
 
 std::expected<void, std::string>
-place_sections(Output& output) {
+place_sections(std::span<Section> sections) {
     constexpr u32 SECTIONS_START = Util::align_up(
         sizeof(DOLHeader) + WATERMARK.size(), Section::ALIGNMENT);
 
-    auto text_sections = output.sections | std::views::filter(&Section::is_text);
-    auto data_sections = output.sections | std::views::filter(&Section::is_data);
+    auto text_sections = sections | std::views::filter(&Section::is_text);
+    auto data_sections = sections | std::views::filter(&Section::is_data);
 
     if (std::ranges::distance(text_sections) > DOLHeader::MAX_TEXT_SECTIONS) {
         return std::unexpected(std::format("got {} text sections (expected <={}).",
@@ -116,7 +120,7 @@ place_sections(Output& output) {
             std::ranges::distance(data_sections), DOLHeader::MAX_DATA_SECTIONS));
     }
 
-    u32 offset = SECTIONS_START;
+    auto offset = SECTIONS_START;
     for (auto& section : std::views::concat(text_sections, data_sections)) {
         section.offset = offset;
         offset += Util::align_up(section.size, Section::ALIGNMENT);
@@ -125,13 +129,14 @@ place_sections(Output& output) {
     return {};
 }
 
+// todo: should this take header by reference or return a DOLHeader? the latter
+// is better but it's a little out of place with the void functions around it
 void
-make_header(Output& output, const ELF::Object& object) {
-    auto& header = output.header;
-    header.entry_point = object.elf_header.e_entry;
+make_header(DOLHeader& header, std::span<const Section> sections, u32 entry_point) {
+    header.entry_point = entry_point;
 
-    auto text_sections = output.sections | std::views::filter(&Section::is_text);
-    auto data_sections = output.sections | std::views::filter(&Section::is_data);
+    auto text_sections = sections | std::views::filter(&Section::is_text);
+    auto data_sections = sections | std::views::filter(&Section::is_data);
 
     std::ranges::copy(text_sections | std::views::transform(&Section::offset), //
         header.text_offsets.begin());
@@ -147,24 +152,25 @@ make_header(Output& output, const ELF::Object& object) {
     std::ranges::copy(data_sections | std::views::transform(&Section::size), //
         header.data_section_sizes.begin());
 
-    if (const auto bss = std::ranges::find_if(output.sections, &Section::is_bss);
-        bss != output.sections.end()) {
+    if (const auto bss = std::ranges::find_if(sections, &Section::is_bss); bss != sections.end()) {
         header.bss_address = bss->address;
         header.bss_size = bss->size;
     }
 }
 
 std::expected<void, std::string>
-write_file(const Output& output, const std::filesystem::path& path) {
+write_file(const std::filesystem::path& path, const DOLHeader& header, //
+    std::span<const Section> sections) //
+{
     std::ofstream stream(path, std::ios::binary);
     if (!stream.is_open()) {
         return std::unexpected("failed to open file.");
     }
 
-    auto header = output.header;
-    Util::byteswap(header);
+    auto swapped = header;
+    Util::byteswap(swapped);
 
-    if (!stream.write(reinterpret_cast<const char*>(&header), sizeof(header))) {
+    if (!stream.write(reinterpret_cast<const char*>(&swapped), sizeof(DOLHeader))) {
         return std::unexpected("failed to write header.");
     }
 
@@ -172,8 +178,7 @@ write_file(const Output& output, const std::filesystem::path& path) {
         return std::unexpected("failed to write watermark.");
     }
 
-    for (const auto& section : output.sections //
-            | std::views::filter(std::not_fn(&Section::is_bss))) {
+    for (const auto& section : sections | std::views::filter(std::not_fn(&Section::is_bss))) {
         stream.seekp(section.offset);
 
         for (const auto bytes : section.data) {

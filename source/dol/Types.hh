@@ -3,6 +3,7 @@
 #include <array>
 #include <cstddef>
 #include <span>
+#include <string_view>
 #include <vector>
 
 namespace Revo::DOL {
@@ -69,11 +70,6 @@ struct Section {
     is_bss() const {
         return type == Type::BSS;
     }
-};
-
-struct Output {
-    DOLHeader header{};
-    std::vector<Section> sections;
 };
 
 } // namespace Revo::DOL

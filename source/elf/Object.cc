@@ -1,12 +1,6 @@
 #include "Object.hh"
 
-#include "elf/Section.hh"
-#include "elf/Symbol.hh"
-
 #include <algorithm>
-#include <functional>
-#include <optional>
-#include <string_view>
 
 namespace Revo::ELF {
 

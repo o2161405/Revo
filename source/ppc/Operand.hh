@@ -1,34 +1,40 @@
 #pragma once
 
+#include "bindings/Attributes.hh"
 #include "ppc/Register.hh"
 
+#include <optional>
 #include <utility>
 #include <variant>
 
 namespace Revo::PPC {
 
 struct Operand {
+    /* clang-format off */
     struct Immediate {
         s32 value;
     };
 
     struct BranchDestination {
-        u32 address;
+        [[= Bindings::Repr::Format{"{:#x}"} ]] u32 address;
     };
 
     struct BranchOptions {
-        u8 value;
+        [[= Bindings::Repr::Format{"{:#07b}"} ]] u8 value;
     };
 
-    /* clang-format off */
-    enum class Access : u8 { //
+    enum class
+    [[= Bindings::Annotation::Flag{} ]] [[= Bindings::Annotation::Arithmetic{} ]]
+    Access : u8 {
         None      = 0,
         Read      = 1 << 0,
         Write     = 1 << 1,
         ReadWrite = Read | Write
     };
 
-    enum class Behavior : u8 { //
+    enum class
+    [[= Bindings::Annotation::Flag{} ]] [[= Bindings::Annotation::Arithmetic{} ]]
+    Behavior : u8 {
         None     = 0,
         Record   = 1 << 0,
         Link     = 1 << 1,
