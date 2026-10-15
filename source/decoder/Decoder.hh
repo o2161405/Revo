@@ -1,6 +1,6 @@
 #pragma once
 
-#include "decode/Types.hh"
+#include "decoder/Types.hh"
 #include "elf/Types.hh"
 #include "ppc/Mnemonic.hh"
 
@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-namespace Revo::Decode {
+namespace Revo::Decoder {
 
 [[nodiscard]] std::expected<std::vector<Function>, std::string>
 decode(std::span<const ELF::Function> functions);
@@ -29,4 +29,4 @@ make_instruction(u32 raw, u32 address);
 
 } // namespace Impl
 
-} // namespace Revo::Decode
+} // namespace Revo::Decoder

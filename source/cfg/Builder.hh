@@ -2,7 +2,7 @@
 
 #include "cfg/Graph.hh"
 #include "cfg/LinkContext.hh"
-#include "decode/Types.hh"
+#include "decoder/Types.hh"
 
 #include <expected>
 #include <flat_map>
@@ -13,16 +13,16 @@
 namespace Revo::CFG {
 
 [[nodiscard]] std::expected<Graph, std::string>
-build(std::span<const Decode::Function> functions);
+build(std::span<const Decoder::Function> functions);
 
 namespace Impl {
 
 // Building steps
 [[nodiscard]] std::expected<std::flat_set<u32>, std::string>
-mark_leaders(std::span<const Decode::Function> functions);
+mark_leaders(std::span<const Decoder::Function> functions);
 
 [[nodiscard]] std::expected<void, std::string>
-construct_blocks(Graph& graph, std::span<const Decode::Function> functions, //
+construct_blocks(Graph& graph, std::span<const Decoder::Function> functions, //
     const std::flat_set<u32>& leaders);
 
 [[nodiscard]] std::expected<void, std::string>
@@ -39,7 +39,7 @@ check_unreachable(const Graph& graph);
 merge_contexts(const Graph& graph, const Function& function);
 
 void
-apply_link(LinkContext& context, const Decode::Instruction& instruction);
+apply_link(LinkContext& context, const Decoder::Instruction& instruction);
 
 } // namespace Impl
 

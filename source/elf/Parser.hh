@@ -14,9 +14,6 @@ namespace Revo::ELF {
 [[nodiscard]] std::expected<Object, std::string>
 parse(const std::filesystem::path& path);
 
-[[nodiscard]] std::expected<Object, std::string>
-parse(std::istream& stream);
-
 namespace Impl {
 
 // Parsing steps

@@ -1,12 +1,10 @@
 #include "Parser.hh"
 
 #include "elf/Constants.hh"
-#include "elf/Symbol.hh"
 #include "ppc/Common.hh"
 #include "util/Util.hh"
 
 #include <algorithm>
-#include <array>
 #include <cstring>
 #include <flat_map>
 #include <format>
@@ -22,11 +20,6 @@ parse(const std::filesystem::path& path) {
         return std::unexpected("failed to open file.");
     }
 
-    return parse(stream);
-}
-
-std::expected<Object, std::string>
-parse(std::istream& stream) {
     Object object;
 
     return Impl::read_elf_header(object, stream)
