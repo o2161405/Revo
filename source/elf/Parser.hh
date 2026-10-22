@@ -1,7 +1,9 @@
 #pragma once
 
 #include "elf/Object.hh"
+#include "util/Util.hh"
 
+#include <cstring>
 #include <expected>
 #include <filesystem>
 #include <istream>
@@ -13,9 +15,6 @@ namespace Revo::ELF {
 
 [[nodiscard]] std::expected<Object, std::string>
 parse(const std::filesystem::path& path);
-
-[[nodiscard]] std::expected<Object, std::string>
-parse(std::istream& stream);
 
 namespace Impl {
 
@@ -52,7 +51,23 @@ read_string(const Section& section, u32 offset);
 
 template <typename TType>
 [[nodiscard]] std::expected<std::vector<TType>, std::string>
-read_table(const Section& section);
+read_table(const Section& section) {
+    if (section.data.size() % sizeof(TType) != 0) {
+        return std::unexpected(std::format( //
+            "section {} (size {}) is not a multiple of {} bytes.", //
+            section.name, section.data.size(), sizeof(TType)));
+    }
+
+    if (section.data.empty()) {
+        return std::vector<TType>{};
+    }
+
+    std::vector<TType> entries(section.data.size() / sizeof(TType));
+    std::memcpy(entries.data(), section.data.data(), section.data.size());
+    Util::byteswap(entries);
+
+    return entries;
+}
 
 } // namespace Impl
 

@@ -6,11 +6,12 @@
 #include "util/Util.hh"
 
 #include <algorithm>
+#include <format>
 #include <meta>
 
 // todo: find better names for parse and make_instruction because they are awful
 
-namespace Revo::Decode {
+namespace Revo::Decoder {
 
 using namespace PPC;
 
@@ -19,10 +20,7 @@ namespace {
 template <typename TSpecification, typename TField>
 [[nodiscard]] consteval Operand::Access
 operand_access() {
-    if constexpr (!IsRegisterField<TField>) {
-        return Operand::Access::None;
-    }
-    else {
+    if constexpr (IsRegisterField<TField>) {
         static_assert(HasAccesses<TSpecification>,
             "Layout has register fields but the specification doesn't provide accesses");
 
@@ -31,14 +29,14 @@ operand_access() {
                 return access.access;
             }
         }
-
-        return Operand::Access::None;
     }
+
+    return Operand::Access::Default;
 }
 
 template <typename TSpecification>
 [[nodiscard]] constexpr bool
-matches_constants(u32 raw) {
+valid_constants(u32 raw) {
     if constexpr (HasConstants<TSpecification>) {
         template for (constexpr auto constant : TSpecification::constants) {
             using TField = [:constant.field:];
@@ -100,8 +98,7 @@ std::expected<Instruction, std::string>
 parse(u32 raw, u32 address) {
     const auto opcd = Form::OPCD::get(raw);
 
-    template for (constexpr auto enumerator :
-        std::define_static_array(std::meta::enumerators_of(^^Mnemonic))) {
+    template for (constexpr auto enumerator : Util::enumerators_array(^^Mnemonic)) {
         constexpr auto mnemonic = [:enumerator:];
         using TSpecification = InstructionSpecification<mnemonic>;
 
@@ -109,7 +106,7 @@ parse(u32 raw, u32 address) {
             continue;
         }
 
-        if (!matches_constants<TSpecification>(raw)) {
+        if (!valid_constants<TSpecification>(raw)) {
             continue;
         }
 
@@ -155,7 +152,7 @@ make_instruction(u32 raw, u32 address) {
         }
     }
 
-    Decode::Instruction decoded_instruction{.mnemonic = TMnemonic, .address = address};
+    Decoder::Instruction decoded_instruction{.mnemonic = TMnemonic, .address = address};
 
     template for (constexpr auto field : TLayout::fields) {
         using TField = [:field:];
@@ -164,7 +161,7 @@ make_instruction(u32 raw, u32 address) {
             constexpr auto access = operand_access<TSpecification, TField>();
 
             if constexpr (IsRegisterField<TField>) {
-                static_assert(access != Operand::Access::None,
+                static_assert(access != Operand::Access::Default,
                     "A register field is missing from the specification's accesses list");
             }
 
@@ -179,7 +176,7 @@ make_instruction(u32 raw, u32 address) {
         else if constexpr (IsBehaviorField<TField>) {
             if constexpr (HasImpliedBehaviors<TSpecification>) {
                 static_assert((TField::behavior & TSpecification::implied_behaviors) ==
-                        Operand::Behavior::None,
+                        Operand::Behavior::Default,
                     "Operand and implied behaviour share one or more flags");
             }
 
@@ -197,7 +194,8 @@ make_instruction(u32 raw, u32 address) {
         decoded_instruction.indirect_branch_source = TSpecification::indirect_branch_source;
     }
 
-    if ((decoded_instruction.behaviors & Operand::Behavior::Absolute) == Operand::Behavior::None) {
+    if ((decoded_instruction.behaviors & Operand::Behavior::Absolute) ==
+        Operand::Behavior::Default) {
         for (auto& operand : decoded_instruction.operands) {
             if (auto* ptr = std::get_if<Operand::BranchDestination>(&operand.value)) {
                 ptr->address += address;
@@ -210,4 +208,4 @@ make_instruction(u32 raw, u32 address) {
 
 } // namespace Impl
 
-} // namespace Revo::Decode
+} // namespace Revo::Decoder

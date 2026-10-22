@@ -1,7 +1,6 @@
 #pragma once
 
 #include <bit>
-#include <concepts>
 #include <meta>
 #include <ranges>
 #include <type_traits>
@@ -47,6 +46,11 @@ align_up(u32 value, u32 alignment) {
 [[nodiscard]] constexpr s32
 align_down(s32 value, s32 alignment) {
     return value & ~(alignment - 1);
+}
+
+[[nodiscard]] consteval auto
+enumerators_array(std::meta::info info) {
+    return std::define_static_array(std::meta::enumerators_of(info));
 }
 
 } // namespace Revo::Util

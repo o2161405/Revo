@@ -2,12 +2,14 @@
 
 #include "ppc/Register.hh"
 
+#include <optional>
 #include <utility>
 #include <variant>
 
 namespace Revo::PPC {
 
 struct Operand {
+    /* clang-format off */
     struct Immediate {
         s32 value;
     };
@@ -20,16 +22,15 @@ struct Operand {
         u8 value;
     };
 
-    /* clang-format off */
-    enum class Access : u8 { //
-        None      = 0,
+    enum class Access : u8 {
+        Default   = 0,
         Read      = 1 << 0,
         Write     = 1 << 1,
         ReadWrite = Read | Write
     };
 
-    enum class Behavior : u8 { //
-        None     = 0,
+    enum class Behavior : u8 {
+        Default  = 0,
         Record   = 1 << 0,
         Link     = 1 << 1,
         Absolute = 1 << 2,
@@ -42,7 +43,7 @@ struct Operand {
         Immediate, BranchDestination, BranchOptions>;
 
     Variant value;
-    Access access{Access::None};
+    Access access{Access::Default};
 
     template <typename TType>
     [[nodiscard]] constexpr bool
