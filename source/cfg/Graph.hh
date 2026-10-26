@@ -1,10 +1,8 @@
 #pragma once
 
-#include "decode/Types.hh"
-#include "ppc/Common.hh"
+#include "decoder/Types.hh"
 
 #include <algorithm>
-#include <concepts>
 #include <cstddef>
 #include <flat_map>
 #include <functional>
@@ -17,17 +15,32 @@ namespace Revo::CFG {
 
 using BlockId = std::size_t;
 
+enum class Terminator : u8 {
+    Fallthrough,
+    Call,
+    Branch,
+    Return,
+    Indirect,
+};
+
 struct Block {
-    std::span<const Decode::Instruction> instructions;
+    std::span<const Decoder::Instruction> instructions;
+    Terminator terminator;
 
     [[nodiscard]] constexpr u32
     address() const {
         return instructions.front().address;
     }
 
-    [[nodiscard]] constexpr const Decode::Instruction&
+    [[nodiscard]] constexpr const Decoder::Instruction&
     last() const {
         return instructions.back();
+    }
+
+    [[nodiscard]] constexpr bool
+    falls_through() const {
+        return terminator == Terminator::Fallthrough //
+            || terminator == Terminator::Call || last().conditional_branch();
     }
 };
 
@@ -99,7 +112,7 @@ struct Graph {
     }
 
     std::optional<BlockId>
-    add_edge(BlockId source, const Decode::Instruction& from, u32 destination, Edge::Type type) {
+    add_edge(BlockId source, const Decoder::Instruction& from, u32 destination, Edge::Type type) {
         const auto destination_block = find_block(destination);
 
         /* clang-format off */

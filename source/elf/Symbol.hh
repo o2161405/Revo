@@ -1,6 +1,6 @@
 #pragma once
 
-#include "elf/Types.hh"
+#include <string>
 
 namespace Revo::ELF {
 

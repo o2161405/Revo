@@ -1,20 +1,19 @@
 #pragma once
 
 #include "elf/Types.hh"
-#include "ppc/InstructionSpecification.hh"
+#include "ppc/Common.hh"
 #include "ppc/Mnemonic.hh"
 #include "ppc/Operand.hh"
 
+#include <algorithm>
+#include <array>
 #include <flat_map>
 #include <inplace_vector>
-#include <meta>
 #include <optional>
 #include <span>
-#include <tuple>
-#include <utility>
 #include <vector>
 
-namespace Revo::Decode {
+namespace Revo::Decoder {
 
 using RelativeOffset = u32;
 
@@ -23,7 +22,12 @@ struct Instruction {
 
     [[nodiscard]] constexpr bool
     is_call() const {
-        return (behaviors & PPC::Operand::Behavior::Link) != PPC::Operand::Behavior::None;
+        return (behaviors & PPC::Operand::Behavior::Link) != PPC::Operand::Behavior::Default;
+    }
+
+    [[nodiscard]] constexpr u32
+    next_address() const {
+        return address + PPC::INSTRUCTION_SIZE;
     }
 
     [[nodiscard]] constexpr bool
@@ -87,4 +91,4 @@ struct Function {
     }
 };
 
-} // namespace Revo::Decode
+} // namespace Revo::Decoder

@@ -3,8 +3,8 @@
 #include "ppc/Common.hh"
 #include "ppc/Operand.hh"
 
-#include <concepts>
 #include <meta>
+#include <type_traits>
 
 namespace Revo::PPC {
 
@@ -46,8 +46,8 @@ struct Field {
     }
 };
 
-template <u8 TStartIndex, u8 TEndIndex>
-struct ExtendedOpcodeField : Field<TStartIndex, TEndIndex, u16> {
+template <u8 TStart, u8 TEnd>
+struct ExtendedOpcodeField : Field<TStart, TEnd, u16> {
     static constexpr bool is_extended_opcode = true;
 };
 

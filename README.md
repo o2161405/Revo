@@ -14,18 +14,12 @@ Revo operates under a "Bring Your Own Protections" model; security comes from im
 ## Building
 ### Requirements
 - g++ >= 16.1 (via [MSYS2](https://www.msys2.org/) for Windows users)
-- ninja 1.3 ([Link](https://ninja-build.org/))
-- Python 3.6
+- CMake >= 3.25
 
 ### How to build
-Generate the build file:
 ```bash
-python3 configure.py
-```
-
-Then run ninja to build:
-```bash
-ninja
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
 ```
 
 ## Usage
